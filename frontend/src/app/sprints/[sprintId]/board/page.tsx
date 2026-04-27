@@ -66,11 +66,11 @@ export default function SprintBoardPage() {
   const handleTicketCreate = async (title: string, status: TicketStatus) => {
     if (!sprint) return;
     try {
-      const projectId = typeof sprint.project === 'string' ? sprint.project : sprint.project._id;
+      const projectId = typeof sprint.project === 'string' ? sprint.project : (sprint.project as any)._id;
       const newTicket = await ticketService.createTicket(projectId, {
         title,
         status,
-        sprint: sprint._id,
+        sprint: sprint._id as any,
         priority: 'Medium',
         type: 'Task'
       });

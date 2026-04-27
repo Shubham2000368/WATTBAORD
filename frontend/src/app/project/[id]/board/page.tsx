@@ -132,7 +132,7 @@ export default function BoardPage() {
           // If ticket has a non-backlog status, normalize it to TO BE GROOMED
           status: BACKLOG_SPRINT_STATUSES.includes(t.status) ? t.status : 'TO BE GROOMED'
         }))
-    : tickets.filter(t => t.sprint?._id === selectedSprint);
+    : tickets.filter(t => (typeof t.sprint === 'object' ? t.sprint?._id : t.sprint) === selectedSprint);
 
   const backlogColumns = [
     { status: 'TO BE GROOMED', title: 'To Be Groomed', color: 'bg-slate-400', icon: '📋' },
@@ -234,7 +234,7 @@ export default function BoardPage() {
                     await ticketService.createTicket(id as string, {
                       title,
                       status: selectedSprint === 'backlog' ? 'TO BE GROOMED' : status,
-                      sprint: selectedSprint !== 'backlog' && selectedSprint !== 'all' ? selectedSprint : undefined,
+                      sprint: (selectedSprint !== 'backlog' && selectedSprint !== 'all') ? (selectedSprint as any) : undefined,
                     });
                     await loadData();
                   } catch (err) {

@@ -237,7 +237,7 @@ export default function DashboardPage() {
                     axisLine={false} 
                     tickLine={false} 
                     tick={{ fontSize: 9, fontWeight: 900, fill: '#94a3b8' }} 
-                    Interval={0}
+                    interval={0}
                   />
                   <YAxis 
                     axisLine={false} 

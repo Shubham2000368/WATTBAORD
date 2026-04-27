@@ -32,7 +32,8 @@ import {
   Shield,
   Folder,
   FolderPlus,
-  ChevronRight
+  ChevronRight,
+  Send
 } from 'lucide-react';
 import Link from 'next/link';
 import { clsx, type ClassValue } from 'clsx';
@@ -62,7 +63,7 @@ export default function ProjectPage() {
     }
     
     if (!currentFolderId) return true;
-    const tFolderId = typeof t.folder === 'string' ? t.folder : t.folder?._id;
+    const tFolderId = typeof t.folder === 'string' ? t.folder : (t.folder as any)?._id;
     return tFolderId === currentFolderId;
   });
   const [showSprintModal, setShowSprintModal] = useState(false);
@@ -270,7 +271,7 @@ export default function ProjectPage() {
         });
         const data = await res.json();
         if (data.success) {
-          loadProject(); // Reload to show empty state
+          loadData(); // Reload to show empty state
           alert('Project data cleared successfully');
         } else {
           setError(data.error || 'Failed to clear project data');
@@ -357,7 +358,7 @@ export default function ProjectPage() {
         description: newTicketDesc,
         priority: newTicketPriority,
         type: newTicketType,
-        sprint: newTicketSprint || undefined,
+        sprint: (newTicketSprint || undefined) as any,
         folder: newTicketFolder || undefined,
         status: isBacklog ? 'TO BE GROOMED' : 'TODO'
       });
@@ -518,7 +519,7 @@ export default function ProjectPage() {
               const isBacklog = folder.name.toLowerCase().includes('backlog');
               const count = tickets.filter(t => {
                 if (isBacklog) return !t.sprint;
-                const fId = typeof t.folder === 'string' ? t.folder : t.folder?._id;
+                const fId = typeof t.folder === 'string' ? t.folder : (t.folder as any)?._id;
                 return fId === folder._id;
               }).length;
 
@@ -899,18 +900,18 @@ export default function ProjectPage() {
                   <p className="text-sm text-slate-400 font-medium text-center py-6">No members yet. Add someone above.</p>
                 )}
                 {project?.members?.map(member => (
-                  <div key={member._id} className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-all">
+                  <div key={member.user._id} className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-all">
                     <div className="flex items-center gap-3">
                       <div className="h-9 w-9 rounded-xl bg-slate-900 flex items-center justify-center text-white text-sm font-black">
-                        {member.name[0]}
+                        {member.user.name[0]}
                       </div>
                       <div>
-                        <p className="text-sm font-black text-slate-900">{member.name}</p>
-                        <p className="text-[11px] text-slate-400 font-medium">{member.email}</p>
+                        <p className="text-sm font-black text-slate-900">{member.user.name}</p>
+                        <p className="text-[11px] text-slate-400 font-medium">{member.user.email}</p>
                       </div>
                     </div>
                     <button
-                      onClick={() => handleRemoveMember(member._id)}
+                      onClick={() => handleRemoveMember(member.user._id)}
                       disabled={memberOpLoading}
                       className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all disabled:opacity-50"
                       title="Remove from project"

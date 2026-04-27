@@ -69,7 +69,7 @@ export interface Ticket {
   assignee?: UserBasic; // Backward compatibility
   reporter: UserBasic;
   project: string | { _id: string; name: string; key: string, members?: UserBasic[] };
-  sprint?: {
+  sprint?: string | {
     _id: string;
     name: string;
   };
@@ -77,7 +77,10 @@ export interface Ticket {
   attachments: Attachment[];
   activityLogs: ActivityLog[];
   timeTracking: TimeTracking;
-  folder?: string;
+  folder?: string | {
+    _id: string;
+    name?: string;
+  };
   createdAt: string;
   updatedAt: string;
 }

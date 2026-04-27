@@ -82,7 +82,7 @@ export const AddMembersModal: React.FC<AddMembersModalProps> = ({
             password: newPassword || 'Pass@123',
             role: 'user'
           });
-          userId = newUser.id || (newUser as any)._id;
+          userId = newUser._id;
         } catch (err: any) {
           if (err.message.toLowerCase().includes('duplicate') || err.message.toLowerCase().includes('exists')) {
              const allUsers = await userService.getUsers();

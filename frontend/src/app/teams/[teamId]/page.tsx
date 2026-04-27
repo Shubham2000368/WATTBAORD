@@ -43,8 +43,8 @@ export default function TeamDetailsPage() {
   const [localAccessState, setLocalAccessState] = useState<Record<string, boolean>>({});
   const [isSavingAccess, setIsSavingAccess] = useState(false);
 
-  const currentUserMember = team?.members.find(m => m && m.user && m.user._id === user?._id);
-  const isAdmin = user?.role?.toLowerCase() === 'admin' || currentUserMember?.role?.toLowerCase() === 'admin' || team?.lead?._id === user?._id;
+  const currentUserMember = team?.members.find(m => m && m.user && m.user._id === user?.id);
+  const isAdmin = user?.role?.toLowerCase() === 'admin' || currentUserMember?.role?.toLowerCase() === 'admin' || team?.lead?._id === user?.id;
 
   useEffect(() => {
     if (teamId) {
@@ -285,7 +285,7 @@ export default function TeamDetailsPage() {
                             </div>
                           </td>
                           <td className="px-10 py-6">
-                             {isAdmin && member.user._id !== user?._id ? (
+                             {isAdmin && member.user._id !== user?.id ? (
                                <div className="relative inline-block group/select">
                                  <select
                                    value={member.role}
@@ -321,7 +321,7 @@ export default function TeamDetailsPage() {
                               <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest px-4 py-2 border border-slate-50 rounded-xl">Isolation Mode</span>
                             ) : (
                               <div className="relative">
-                                {isAdmin && member.user._id !== user?._id ? (
+                                {isAdmin && member.user._id !== user?.id ? (
                                   <>
                                     <button 
                                       onClick={() => {
@@ -427,7 +427,7 @@ export default function TeamDetailsPage() {
                             )}
                           </td>
                           <td className="px-10 py-6 text-right">
-                             {isAdmin && member.user._id !== user?._id && (
+                             {isAdmin && member.user._id !== user?.id && (
                                <button 
                                 onClick={() => handleRemoveMember(member.user._id)}
                                 disabled={removingMemberId === member.user._id}

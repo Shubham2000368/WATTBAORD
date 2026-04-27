@@ -5,7 +5,7 @@ export interface TeamMember {
     email: string;
     avatar?: string;
   };
-  role: 'member' | 'admin';
+  role: 'member' | 'admin' | 'developer' | 'qa';
 }
 
 export interface Team {

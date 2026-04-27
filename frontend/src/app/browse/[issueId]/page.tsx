@@ -293,7 +293,7 @@ export default function IssueDetailPage() {
         parent: parentId,
         status: 'TODO',
         type: 'Subtask',
-        sprint: sprintId
+        sprint: sprintId as any
       });
       
       if (newSub) {
