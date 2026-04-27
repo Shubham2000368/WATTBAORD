@@ -28,7 +28,7 @@ interface UserFromAPI {
   role: string;
 }
 
-const STATUS_OPTIONS = ['TODO', 'IN PROGRESS', 'READY FOR QA', 'IN QA', 'BLOCKED', 'QA ACCEPTED', 'COMPLETED', 'REOPENED'];
+const STATUS_OPTIONS = ['TODO', 'IN PROGRESS', 'READY FOR QA', 'IN QA', 'BLOCKED', 'QA ACCEPTED', 'COMPLETED', 'REOPENED', 'TO BE GROOMED', 'GROOMED', 'READY FOR SPRINT', 'IN SPRINT'];
 const PRIORITY_OPTIONS = ['Blocker', 'High', 'Medium', 'Low'];
 
 const STATUS_COLORS: Record<string, string> = {
@@ -40,6 +40,10 @@ const STATUS_COLORS: Record<string, string> = {
   'QA ACCEPTED':   'bg-teal-100 text-teal-700',
   'COMPLETED':     'bg-emerald-100 text-emerald-700',
   'REOPENED':      'bg-pink-100 text-pink-700',
+  'TO BE GROOMED': 'bg-slate-50 text-slate-500',
+  'GROOMED':       'bg-sky-50 text-sky-600',
+  'READY FOR SPRINT': 'bg-violet-50 text-violet-600',
+  'IN SPRINT':     'bg-emerald-50 text-emerald-600',
 };
 
 const PRIORITY_CONFIG: Record<string, { color: string; dot: string; emoji: string }> = {

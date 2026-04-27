@@ -44,7 +44,8 @@ const DEFAULT_TRANSITIONS: Record<TicketStatus, TicketStatus[]> = {
   // Backlog transitions
   'TO BE GROOMED': ['GROOMED'],
   'GROOMED': ['READY FOR SPRINT', 'TO BE GROOMED'],
-  'READY FOR SPRINT': ['GROOMED', 'IN SPRINT']
+  'READY FOR SPRINT': ['GROOMED', 'IN SPRINT'],
+  'IN SPRINT': ['TODO']
 };
 
 export function KanbanBoard({ initialTickets, onTicketUpdate, onCreateTicket, customColumns, customTransitions, onMoveToActiveSprint }: KanbanBoardProps) {

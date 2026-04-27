@@ -15,7 +15,8 @@ export type TicketStatus =
   | 'COMPLETED'
   | 'TO BE GROOMED'
   | 'GROOMED'
-  | 'READY FOR SPRINT';
+  | 'READY FOR SPRINT'
+  | 'IN SPRINT';
 
 export interface Comment {
   _id: string;
@@ -76,6 +77,7 @@ export interface Ticket {
   attachments: Attachment[];
   activityLogs: ActivityLog[];
   timeTracking: TimeTracking;
+  folder?: string;
   createdAt: string;
   updatedAt: string;
 }
