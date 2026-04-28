@@ -20,7 +20,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, user, loading: authLoading } = useAuth();
+  const router = useRouter();
+
+  // Prevent double login: if already logged in, go to dashboard
+  React.useEffect(() => {
+    if (!authLoading && user) {
+      router.replace('/dashboard');
+    }
+  }, [user, authLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,6 +60,14 @@ export default function LoginPage() {
     const backendUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'https://wattbaord.onrender.com';
     window.location.href = `${backendUrl}/api/auth/google`;
   };
+
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950">
+        <Loader2 className="h-10 w-10 animate-spin text-indigo-400" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-900 overflow-hidden relative">
