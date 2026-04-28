@@ -70,7 +70,6 @@ export default function SignupPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-900 overflow-hidden relative">
-      {/* Dynamic Background */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         <div className="absolute -top-[10%] -left-[10%] w-[50%] h-[50%] bg-indigo-600/20 rounded-full blur-[120px] animate-pulse" />
         <div className="absolute -bottom-[10%] -right-[10%] w-[50%] h-[50%] bg-purple-600/20 rounded-full blur-[120px] animate-pulse [animation-delay:2s]" />
@@ -78,8 +77,6 @@ export default function SignupPage() {
 
       <div className="w-full max-w-xl px-4 z-10 animate-in fade-in zoom-in-95 duration-1000 py-12">
         <div className="bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-10 lg:p-14 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)]">
-          
-          {/* Header */}
           <div className="text-center mb-10">
             <div className="inline-flex h-16 w-16 items-center justify-center rounded-3xl bg-indigo-600 shadow-2xl shadow-indigo-500/50 mb-6 rotate-3 hover:rotate-12 transition-transform duration-500">
               <Sparkles className="h-8 w-8 text-white" />
@@ -90,17 +87,14 @@ export default function SignupPage() {
             </p>
           </div>
 
-          {/* Google Sign Up */}
           <GoogleAuthButton label="Sign up with Google" />
 
-          {/* Divider */}
           <div className="flex items-center gap-4 my-6">
             <div className="flex-1 h-px bg-white/10" />
             <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">or sign up with email</span>
             <div className="flex-1 h-px bg-white/10" />
           </div>
 
-          {/* Form */}
           <form className="space-y-5" onSubmit={handleSubmit}>
             {error && (
               <div className="rounded-2xl bg-rose-500/10 border border-rose-500/20 p-4 flex items-start gap-3 animate-in slide-in-from-top-4 duration-500">
@@ -111,14 +105,12 @@ export default function SignupPage() {
               </div>
             )}
 
-            {/* Full Name */}
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-4">
                 <UserIcon size={12} className="text-indigo-400" />
                 <span>Full Name</span>
               </label>
               <input
-                id="name"
                 type="text"
                 required
                 className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-[1.5rem] outline-none focus:bg-white/10 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-bold text-white placeholder-slate-500 text-sm"
@@ -128,16 +120,13 @@ export default function SignupPage() {
               />
             </div>
 
-            {/* Email */}
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-4">
                 <Mail size={12} className="text-indigo-400" />
                 <span>Email Address</span>
               </label>
               <input
-                id="email"
                 type="email"
-                autoComplete="email"
                 required
                 className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-[1.5rem] outline-none focus:bg-white/10 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-bold text-white placeholder-slate-500 text-sm"
                 placeholder="e.g. rakesh@wattmonk.com"
@@ -146,16 +135,13 @@ export default function SignupPage() {
               />
             </div>
 
-            {/* Password */}
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-4">
                 <Lock size={12} className="text-indigo-400" />
                 <span>Password</span>
               </label>
               <input
-                id="password"
                 type="password"
-                autoComplete="new-password"
                 required
                 className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-[1.5rem] outline-none focus:bg-white/10 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-bold text-white placeholder-slate-500 text-sm"
                 placeholder="Minimum 6 characters"
@@ -164,7 +150,6 @@ export default function SignupPage() {
               />
             </div>
 
-            {/* Submit */}
             <button
               type="submit"
               disabled={loading}
@@ -182,7 +167,6 @@ export default function SignupPage() {
             </button>
           </form>
 
-          {/* Footer */}
           <div className="mt-8 text-center">
             <p className="text-xs font-bold text-slate-500 uppercase tracking-[0.1em]">
               Already have an account?{' '}

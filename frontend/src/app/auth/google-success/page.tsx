@@ -38,9 +38,6 @@ function GoogleSuccessContent() {
       } else {
         router.replace('/login?error=no_token');
       }
-    };
-
-    handleSuccess();
   }, [searchParams, router, login]);
 
   return (
