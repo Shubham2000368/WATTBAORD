@@ -4,7 +4,8 @@ import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
-export default function GoogleSuccessPage() {
+// Inner client component that safely uses useSearchParams
+function GoogleSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -18,9 +19,7 @@ export default function GoogleSuccessPage() {
     }
 
     if (token) {
-      // Store the token in localStorage (same as normal login)
       localStorage.setItem('token', token);
-      // Redirect to dashboard
       router.replace('/dashboard');
     } else {
       router.replace('/login?error=no_token');
@@ -34,5 +33,25 @@ export default function GoogleSuccessPage() {
         <p className="text-slate-300 font-medium">Signing you in with Google...</p>
       </div>
     </div>
+  );
+}
+
+// Main page export — wraps content in Suspense to fix Next.js build error
+import { Suspense } from 'react';
+
+export default function GoogleSuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-slate-950">
+          <div className="flex flex-col items-center gap-4 text-white">
+            <Loader2 className="h-10 w-10 animate-spin text-indigo-400" />
+            <p className="text-slate-300 font-medium">Loading...</p>
+          </div>
+        </div>
+      }
+    >
+      <GoogleSuccessContent />
+    </Suspense>
   );
 }
