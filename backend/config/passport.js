@@ -1,6 +1,7 @@
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const User = require('../models/User');
+const Team = require('../models/Team');
 
 passport.use(
   new GoogleStrategy(
@@ -11,22 +12,59 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
-        // Check if user already exists
-        let user = await User.findOne({ email: profile.emails[0].value });
+        const email = profile.emails[0].value;
+        const isWattMonkDomain = email.endsWith('@wattmonk.com');
 
-        if (user) {
-          // User exists, return them
-          return done(null, user);
+        // Check if user already exists
+        let user = await User.findOne({ email });
+
+        if (!user) {
+          // Create new user from Google profile
+          user = await User.create({
+            name: profile.displayName,
+            email: email,
+            avatar: profile.photos[0]?.value || '',
+            password: `google_${profile.id}_${Date.now()}`, // Dummy password for OAuth users
+            role: 'user',
+          });
         }
 
-        // Create new user from Google profile
-        user = await User.create({
-          name: profile.displayName,
-          email: profile.emails[0].value,
-          avatar: profile.photos[0]?.value || '',
-          password: `google_${profile.id}_${Date.now()}`, // Dummy password for OAuth users
-          role: 'user',
-        });
+        // Automatic Team Assignment for @wattmonk.com domain
+        if (isWattMonkDomain && !user.team) {
+          const teamName = 'WattMonk Team';
+          let team = await Team.findOne({ name: teamName });
+
+          if (!team) {
+            // Find an admin to be the lead, otherwise use the current user
+            const admin = await User.findOne({ role: 'admin' });
+            const initialMembers = [{ user: user._id, role: 'member' }];
+
+            // If an admin exists and is not the current user, add them as an admin member
+            if (admin && admin._id.toString() !== user._id.toString()) {
+              initialMembers.push({ user: admin._id, role: 'admin' });
+            }
+
+            team = await Team.create({
+              name: teamName,
+              lead: admin ? admin._id : user._id,
+              members: initialMembers,
+              color: 'bg-indigo-600',
+            });
+          } else {
+            // Add to existing team members if not already there
+            const isMember = team.members.some(
+              (m) => m.user.toString() === user._id.toString()
+            );
+            if (!isMember) {
+              team.members.push({ user: user._id, role: 'member' });
+              await team.save();
+            }
+          }
+
+          // Update user document with team reference
+          user.team = team._id;
+          await user.save();
+        }
 
         return done(null, user);
       } catch (err) {
