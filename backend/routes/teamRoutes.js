@@ -1,5 +1,5 @@
 const express = require('express');
-const { getTeams, getTeam, createTeam, deleteTeam, addMembers, removeMember, updateMemberRole } = require('../controllers/teamController');
+const { getTeams, getTeam, createTeam, updateTeam, deleteTeam, addMembers, removeMember, updateMemberRole } = require('../controllers/teamController');
 const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
