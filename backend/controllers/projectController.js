@@ -75,6 +75,18 @@ exports.getProject = async (req, res, next) => {
 // @access  Private
 exports.createProject = async (req, res, next) => {
   try {
+    // Check team permission
+    if (req.user.team) {
+      const Team = require('../models/Team');
+      const team = await Team.findById(req.user.team);
+      if (team && !team.allowProjectCreation && req.user.role !== 'admin') {
+        return res.status(403).json({ 
+          success: false, 
+          error: 'Only admins can create projects in this team' 
+        });
+      }
+    }
+
     // Add user to req.body
     req.body.owner = req.user._id.toString();
     if (!req.body.team && req.user.team) req.body.team = req.user.team;

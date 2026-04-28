@@ -217,3 +217,42 @@ exports.updateMemberRole = async (req, res, next) => {
     res.status(400).json({ success: false, error: err.message });
   }
 };
+
+// @desc    Update team
+// @route   PUT /api/teams/:id
+// @access  Private (Admin Only)
+exports.updateTeam = async (req, res, next) => {
+  try {
+    let team = await Team.findById(req.params.id);
+
+    if (!team) {
+      return res.status(404).json({ success: false, error: 'Team not found' });
+    }
+
+    // Only allow updating specific fields
+    const allowedFields = ['name', 'color', 'lead', 'allowProjectCreation'];
+    const updates = {};
+    
+    Object.keys(req.body).forEach(key => {
+      if (allowedFields.includes(key)) {
+        updates[key] = req.body[key];
+      }
+    });
+
+    team = await Team.findByIdAndUpdate(req.params.id, updates, {
+      new: true,
+      runValidators: true,
+    })
+    .populate('lead', 'name email avatar')
+    .populate('members.user', 'name email avatar');
+
+    res.status(200).json({
+      success: true,
+      data: team,
+    });
+  } catch (err) {
+    console.error(`[TeamController] Error in PUT /api/teams/:id:`, err);
+    res.status(400).json({ success: false, error: err.message });
+  }
+};
+

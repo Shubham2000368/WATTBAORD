@@ -51,6 +51,7 @@ export default function DashboardPage() {
   const [projectBreakdown, setProjectBreakdown] = useState<any[]>([]);
   const [myTasks, setMyTasks] = useState<Ticket[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [team, setTeam] = useState<any>(null);
 
   const ALL_STATUSES = ['TO BE GROOMED', 'GROOMED', 'READY FOR SPRINT', 'TODO', 'IN PROGRESS', 'READY FOR QA', 'IN QA', 'QA ACCEPTED', 'REOPENED', 'BLOCKED', 'COMPLETED'];
 
@@ -60,6 +61,13 @@ export default function DashboardPage() {
       try {
         const projData = await projectService.getProjects();
         setProjects(projData);
+
+        // Fetch team settings if user has a team
+        if (user?.team) {
+          const { teamService } = require('@/services/teamService');
+          const teamData = await teamService.getTeam(user.team);
+          setTeam(teamData);
+        }
 
         let allTickets: Ticket[] = [];
         const breakdown = [];
@@ -133,6 +141,9 @@ export default function DashboardPage() {
     }
   }, [user, authLoading, router]);
 
+  const isAdmin = user?.role?.toLowerCase() === 'admin';
+  const canCreateProject = isAdmin || team?.allowProjectCreation !== false;
+
   if (loading || authLoading) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
@@ -169,7 +180,7 @@ export default function DashboardPage() {
            <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest">Project Health</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {projectBreakdown.map(proj => (
+          {projectBreakdown.length > 0 ? projectBreakdown.map(proj => (
             <Link key={proj.id} href={`/project/${proj.id}`} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group">
               <div className="flex items-center justify-between mb-6">
                  <div className="flex items-center gap-4">
@@ -191,7 +202,32 @@ export default function DashboardPage() {
                  <MiniStatus count={proj.counts.COMPLETED} label="DONE" color="bg-emerald-500" />
               </div>
             </Link>
-          ))}
+          )) : (
+            <div className="col-span-full bg-white border-2 border-dashed border-slate-200 rounded-[3rem] p-12 text-center space-y-6">
+               <div className="h-20 w-20 bg-indigo-50 text-indigo-600 rounded-[2rem] flex items-center justify-center mx-auto shadow-inner">
+                  <Layout size={32} />
+               </div>
+               <div className="space-y-2">
+                  <h3 className="text-xl font-black text-slate-900">Start Your First Project</h3>
+                  <p className="text-sm font-bold text-slate-500 max-w-sm mx-auto">Create a workspace to manage your team tasks and sprints effectively.</p>
+               </div>
+               <Link 
+                href="/projects" 
+                className={cn(
+                  "inline-flex items-center gap-3 px-10 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all active:scale-95",
+                  canCreateProject 
+                    ? "bg-indigo-600 text-white hover:bg-indigo-700 shadow-xl shadow-indigo-100" 
+                    : "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
+                )}
+               >
+                 {canCreateProject ? "Create New Project" : "Creation Restricted"}
+                 <Plus size={16} />
+               </Link>
+               {!canCreateProject && (
+                 <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest">Only admins can create projects in this team</p>
+               )}
+            </div>
+          )}
         </div>
       </div>
 

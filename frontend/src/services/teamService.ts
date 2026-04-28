@@ -18,6 +18,7 @@ export interface Team {
     email: string;
   };
   members: TeamMember[];
+  allowProjectCreation: boolean;
   createdAt: string;
 }
 
@@ -59,6 +60,19 @@ export const teamService = {
   createTeam: async (teamData: Partial<Team>): Promise<Team> => {
     const res = await fetch(API_URL, {
       method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(teamData),
+    });
+    const data = await res.json();
+    if (!data.success && data.error) {
+      throw new Error(data.error);
+    }
+    return data.data;
+  },
+
+  updateTeam: async (id: string, teamData: Partial<Team>): Promise<Team> => {
+    const res = await fetch(`${API_URL}/${id}`, {
+      method: 'PUT',
       headers: getHeaders(),
       body: JSON.stringify(teamData),
     });

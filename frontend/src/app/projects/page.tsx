@@ -28,6 +28,7 @@ export default function ProjectsListPage() {
   const [newProjectDesc, setNewProjectDesc] = useState('');
   const [createLoading, setCreateLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [team, setTeam] = useState<any>(null);
   const { user } = useAuth();
   const isAdmin = user?.role?.toLowerCase() === 'admin';
 
@@ -35,16 +36,25 @@ export default function ProjectsListPage() {
     try {
       const data = await projectService.getProjects();
       setProjects(data);
+      
+      // Fetch team settings if user has a team
+      if (user?.team) {
+        const { teamService } = require('@/services/teamService');
+        const teamData = await teamService.getTeam(user.team);
+        setTeam(teamData);
+      }
     } catch (err) {
-      console.error('Failed to fetch projects', err);
+      console.error('Failed to fetch projects or team', err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchProjects();
-  }, []);
+    if (user) fetchProjects();
+  }, [user]);
+
+  const canCreateProject = isAdmin || team?.allowProjectCreation !== false;
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,8 +117,15 @@ export default function ProjectsListPage() {
           <p className="text-slate-500 font-medium">Manage and track your active projects.</p>
         </div>
         <button 
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 bg-indigo-600 px-6 py-3 rounded-2xl text-sm font-bold text-white hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 active:scale-95 shrink-0"
+          onClick={() => canCreateProject && setShowCreateModal(true)}
+          disabled={!canCreateProject}
+          title={!canCreateProject ? "Only admin can create projects" : ""}
+          className={cn(
+            "flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold text-white transition-all shadow-xl shrink-0 active:scale-95",
+            canCreateProject 
+              ? "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100" 
+              : "bg-slate-400 cursor-not-allowed shadow-none"
+          )}
         >
           <Plus className="h-4 w-4" />
           <span>New Project</span>
@@ -289,4 +306,8 @@ export default function ProjectsListPage() {
       )}
     </div>
   );
+}
+
+function cn(...inputs: any[]) {
+  return inputs.filter(Boolean).join(' ');
 }

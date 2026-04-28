@@ -107,6 +107,18 @@ export default function TeamDetailsPage() {
     }
   };
 
+  const handleToggleProjectCreation = async () => {
+    if (!team) return;
+    try {
+      const updatedTeam = await teamService.updateTeam(team._id, {
+        allowProjectCreation: !team.allowProjectCreation
+      });
+      setTeam(updatedTeam);
+    } catch (err: any) {
+      alert(err.message || 'Failed to update team settings');
+    }
+  };
+
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center bg-slate-50">
@@ -192,9 +204,21 @@ export default function TeamDetailsPage() {
 
           {isAdmin && (
             <div className="flex items-center gap-4 bg-white/40 backdrop-blur-md p-3 rounded-[2.5rem] border border-white/60 shadow-xl shadow-slate-200/40 self-start lg:self-center">
-               <button className="h-14 w-14 flex items-center justify-center bg-white rounded-2xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all shadow-sm active:scale-95 border border-slate-100">
-                  <Settings size={22} />
-               </button>
+               <div className="flex items-center gap-3 px-6 py-4 bg-white/60 rounded-2xl border border-white/40">
+                  <div className="flex flex-col">
+                     <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">Project Creation</span>
+                     <span className={`text-[10px] font-black uppercase tracking-tight ${team.allowProjectCreation ? 'text-emerald-600' : 'text-rose-500'}`}>
+                        {team.allowProjectCreation ? 'Unlocked' : 'Restricted'}
+                     </span>
+                  </div>
+                  <button 
+                    onClick={handleToggleProjectCreation}
+                    className="transition-all hover:scale-110 active:scale-95 text-indigo-600"
+                  >
+                    {team.allowProjectCreation ? <ToggleRight size={32} /> : <ToggleLeft size={32} className="text-slate-300" />}
+                  </button>
+               </div>
+               
                <button 
                 onClick={() => setIsAddModalOpen(true)}
                 className="flex items-center gap-3 bg-slate-900 px-10 py-4 rounded-[1.5rem] text-sm font-black text-white hover:bg-indigo-600 transition-all shadow-2xl shadow-slate-300 hover:shadow-indigo-200 active:scale-95 hover:-translate-y-1"

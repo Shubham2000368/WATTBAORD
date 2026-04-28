@@ -12,6 +12,7 @@ router.route('/')
 
 router.route('/:id')
   .get(getTeam)
+  .put(authorize('admin'), updateTeam)
   .delete(authorize('admin'), deleteTeam);
 
 router.route('/:id/members')
