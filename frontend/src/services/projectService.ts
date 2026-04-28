@@ -40,7 +40,14 @@ const getHeaders = () => {
 };
 
 // In-memory cache for ultra-fast UI
-const cache = {
+const cache: {
+  projects: Project[] | null;
+  projectDetails: Record<string, Project>;
+  lastFetch: number;
+  token: string | null;
+} = {
+  projects: null,
+  projectDetails: {},
   lastFetch: 0,
   token: null as string | null
 };
