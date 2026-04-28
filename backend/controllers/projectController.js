@@ -23,7 +23,8 @@ exports.getProjects = async (req, res, next) => {
     const projects = await Project.find(query)
       .populate('owner', 'name email')
       .populate('members.user', 'name email')
-      .populate('team', 'name color');
+      .populate('team', 'name color')
+      .lean();
 
     res.status(200).json({
       success: true,
@@ -43,7 +44,8 @@ exports.getProject = async (req, res, next) => {
   try {
     const project = await Project.findById(req.params.id)
       .populate('owner', 'name email')
-      .populate('members.user', 'name email');
+      .populate('members.user', 'name email')
+      .lean();
 
     if (!project) {
       return res.status(404).json({ success: false, error: 'Project not found' });

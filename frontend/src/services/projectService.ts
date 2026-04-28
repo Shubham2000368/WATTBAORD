@@ -39,21 +39,60 @@ const getHeaders = () => {
   };
 };
 
+// In-memory cache for ultra-fast UI
+const cache = {
+  projects: null as Project[] | null,
+  projectDetails: {} as Record<string, Project>,
+  lastFetch: 0
+};
+
+const CACHE_TTL = 30000; // 30 seconds
+
 export const projectService = {
-  getProjects: async (): Promise<Project[]> => {
+  getProjects: async (forceRefresh = false): Promise<Project[]> => {
+    const now = Date.now();
+    if (!forceRefresh && cache.projects && (now - cache.lastFetch < CACHE_TTL)) {
+      return cache.projects;
+    }
+
     const res = await fetch(API_URL, {
       headers: getHeaders(),
     });
     const data = await res.json();
-    return data.success ? data.data : [];
+    if (data.success) {
+      cache.projects = data.data;
+      cache.lastFetch = now;
+      return data.data;
+    }
+    return [];
   },
 
-  getProject: async (id: string): Promise<Project | null> => {
+  getProject: async (id: string, forceRefresh = false): Promise<Project | null> => {
+    if (!forceRefresh && cache.projectDetails[id]) {
+      // Return cached version but fetch in background to update
+      projectService.fetchProjectInBackground(id);
+      return cache.projectDetails[id];
+    }
+
     const res = await fetch(`${API_URL}/${id}`, {
       headers: getHeaders(),
     });
     const data = await res.json();
-    return data.success ? data.data : null;
+    if (data.success) {
+      cache.projectDetails[id] = data.data;
+      return data.data;
+    }
+    return null;
+  },
+
+  fetchProjectInBackground: async (id: string) => {
+    try {
+      const res = await fetch(`${API_URL}/${id}`, {
+        headers: getHeaders(),
+      });
+      const data = await res.json();
+      if (data.success) cache.projectDetails[id] = data.data;
+    } catch (e) {}
   },
 
   createProject: async (projectData: { name: string; description?: string }): Promise<Project | null> => {
@@ -63,6 +102,7 @@ export const projectService = {
       body: JSON.stringify(projectData),
     });
     const data = await res.json();
+    if (data.success) cache.projects = null; // Invalidate cache
     return data.success ? data.data : null;
   },
 
@@ -73,6 +113,10 @@ export const projectService = {
       body: JSON.stringify(projectData),
     });
     const data = await res.json();
+    if (data.success) {
+      cache.projectDetails[id] = data.data;
+      cache.projects = null;
+    }
     return data.success ? data.data : null;
   },
 
@@ -82,6 +126,10 @@ export const projectService = {
       headers: getHeaders(),
     });
     const data = await res.json();
+    if (data.success) {
+      delete cache.projectDetails[id];
+      cache.projects = null;
+    }
     return data.success;
   },
 
@@ -92,6 +140,7 @@ export const projectService = {
       body: JSON.stringify({ email }),
     });
     const data = await res.json();
+    if (data.success) cache.projectDetails[projectId] = data.data;
     return data.success ? data.data : null;
   },
 
@@ -101,6 +150,7 @@ export const projectService = {
       headers: getHeaders(),
     });
     const data = await res.json();
+    if (data.success) cache.projectDetails[projectId] = data.data;
     return data.success ? data.data : null;
   },
 
@@ -111,6 +161,7 @@ export const projectService = {
       body: JSON.stringify({ userId, hasAccess }),
     });
     const data = await res.json();
+    if (data.success) cache.projectDetails[projectId] = data.data;
     return data.success ? data.data : null;
   },
 
@@ -121,6 +172,7 @@ export const projectService = {
       body: JSON.stringify({ userId, accessUpdates }),
     });
     const data = await res.json();
+    if (data.success) cache.projects = null;
     return data.success;
   },
   
@@ -131,6 +183,7 @@ export const projectService = {
       body: JSON.stringify({ name, icon }),
     });
     const data = await res.json();
+    if (data.success) cache.projectDetails[projectId] = data.data;
     return data.success ? data.data : null;
   },
 
@@ -140,6 +193,7 @@ export const projectService = {
       headers: getHeaders(),
     });
     const data = await res.json();
+    if (data.success) cache.projects = null;
     return data.success;
   },
 };

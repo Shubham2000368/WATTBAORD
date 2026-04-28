@@ -80,7 +80,6 @@ userSchema.methods.getResetPasswordToken = function () {
 };
 
 // Add indexes for faster login and searches
-userSchema.index({ email: 1 });
 userSchema.index({ role: 1 });
 userSchema.index({ team: 1 });
 

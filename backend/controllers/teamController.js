@@ -8,7 +8,8 @@ exports.getTeams = async (req, res, next) => {
   try {
     const teams = await Team.find()
       .populate('lead', 'name email avatar')
-      .populate('members.user', 'name email avatar');
+      .populate('members.user', 'name email avatar')
+      .lean();
 
     res.status(200).json({
       success: true,
@@ -28,7 +29,8 @@ exports.getTeam = async (req, res, next) => {
   try {
     const team = await Team.findById(req.params.id)
       .populate('lead', 'name email avatar')
-      .populate('members.user', 'name email avatar');
+      .populate('members.user', 'name email avatar')
+      .lean();
 
     if (!team) {
       return res.status(404).json({ success: false, error: 'Team not found' });
