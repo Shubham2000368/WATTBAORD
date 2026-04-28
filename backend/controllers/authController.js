@@ -214,11 +214,29 @@ exports.forgotPassword = async (req, res, next) => {
     console.log('Reset URL:', resetUrl);
     console.log('================================================');
 
-    res.status(200).json({
-      success: true,
-      data: 'Email sent (Logged to terminal for testing)',
-      resetUrl // Sending resetUrl back to frontend for testing convenience
-    });
+    try {
+      const sendEmail = require('../utils/sendEmail');
+      await sendEmail({
+        email: user.email,
+        subject: 'Password Reset Token',
+        message: `You are receiving this email because you (or someone else) has requested the reset of a password. \n\n Please click on the following link to reset your password: \n\n ${resetUrl}`
+      });
+
+      res.status(200).json({
+        success: true,
+        data: 'Email sent successfully'
+      });
+    } catch (err) {
+      console.error('Email Error:', err.message);
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpire = undefined;
+      await user.save({ validateBeforeSave: false });
+
+      return res.status(500).json({
+        success: false,
+        error: 'Email could not be sent. Please contact support.'
+      });
+    }
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
   }
