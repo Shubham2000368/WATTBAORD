@@ -83,6 +83,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    
+    // Clear project service cache
+    try {
+      const { clearProjectCache } = require('../services/projectService');
+      clearProjectCache();
+    } catch (e) {}
+
     router.push('/login');
   };
 

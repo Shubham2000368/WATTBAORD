@@ -41,9 +41,15 @@ const getHeaders = () => {
 
 // In-memory cache for ultra-fast UI
 const cache = {
-  projects: null as Project[] | null,
-  projectDetails: {} as Record<string, Project>,
-  lastFetch: 0
+  lastFetch: 0,
+  token: null as string | null
+};
+
+export const clearProjectCache = () => {
+  cache.projects = null;
+  cache.projectDetails = {};
+  cache.lastFetch = 0;
+  cache.token = null;
 };
 
 const CACHE_TTL = 30000; // 30 seconds
@@ -51,6 +57,14 @@ const CACHE_TTL = 30000; // 30 seconds
 export const projectService = {
   getProjects: async (forceRefresh = false): Promise<Project[]> => {
     const now = Date.now();
+    const currentToken = localStorage.getItem('token');
+    
+    // Clear cache if token changed
+    if (currentToken !== cache.token) {
+      clearProjectCache();
+      cache.token = currentToken;
+    }
+
     if (!forceRefresh && cache.projects && (now - cache.lastFetch < CACHE_TTL)) {
       return cache.projects;
     }

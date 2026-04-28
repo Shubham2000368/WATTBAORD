@@ -56,7 +56,7 @@ exports.getProject = async (req, res, next) => {
     const isMember = project.members.some(m => m.user && m.user._id.toString() === userId && m.hasAccess);
     const isTeamMember = project.team && req.user.team && project.team.toString() === req.user.team.toString();
     
-    if (project.owner._id.toString() !== userId && !isMember && !isTeamMember && req.user.role !== 'admin') {
+    if (project.owner._id.toString() !== userId && !isMember && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, error: 'Not authorized to view this project' });
     }
 
