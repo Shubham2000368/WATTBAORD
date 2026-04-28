@@ -64,6 +64,24 @@ passport.use(
           // Update user document with team reference
           user.team = team._id;
           await user.save();
+
+          // Auto-grant access to all projects in this team
+          const Project = require('../models/Project');
+          const projects = await Project.find({ team: team._id });
+
+          for (const project of projects) {
+            const isMember = project.members.some(
+              (m) => m.user && m.user.toString() === user._id.toString()
+            );
+            if (!isMember) {
+              project.members.push({
+                user: user._id,
+                role: 'Member',
+                hasAccess: true,
+              });
+              await project.save();
+            }
+          }
         }
 
         return done(null, user);
