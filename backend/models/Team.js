@@ -33,4 +33,7 @@ const teamSchema = new mongoose.Schema({
   },
 });
 
+// Add indexes for faster team lookups
+teamSchema.index({ 'members.user': 1 });
+
 module.exports = mongoose.model('Team', teamSchema);

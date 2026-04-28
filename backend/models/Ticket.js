@@ -168,4 +168,10 @@ ticketSchema.pre('save', async function () {
   }
 });
 
+// Add indexes for faster ticket lookups
+ticketSchema.index({ project: 1 });
+ticketSchema.index({ sprint: 1 });
+ticketSchema.index({ assignee: 1 });
+ticketSchema.index({ status: 1 });
+
 module.exports = mongoose.model('Ticket', ticketSchema);

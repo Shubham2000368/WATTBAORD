@@ -59,4 +59,9 @@ const projectSchema = new mongoose.Schema({
   },
 });
 
+// Add indexes for faster project lookups
+projectSchema.index({ owner: 1 });
+projectSchema.index({ team: 1 });
+projectSchema.index({ 'members.user': 1 });
+
 module.exports = mongoose.model('Project', projectSchema);

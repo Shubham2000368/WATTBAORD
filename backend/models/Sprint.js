@@ -30,4 +30,8 @@ const sprintSchema = new mongoose.Schema({
   },
 });
 
+// Add indexes for faster sprint lookups
+sprintSchema.index({ project: 1 });
+sprintSchema.index({ status: 1 });
+
 module.exports = mongoose.model('Sprint', sprintSchema);
