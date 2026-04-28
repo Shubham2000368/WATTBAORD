@@ -30,7 +30,8 @@ import {
   Clock, 
   Activity,
   ArrowUpRight,
-  Loader2
+  Loader2,
+  Plus
 } from 'lucide-react';
 import Link from 'next/link';
 
