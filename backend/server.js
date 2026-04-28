@@ -7,9 +7,13 @@ const app = express();
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 5001;
 
+const passport = require('passport');
+require('./config/passport'); // Load Google Strategy
+
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(passport.initialize());
 
 let lastDbError = null;
 
