@@ -81,30 +81,29 @@ export default function LandingPage() {
         {/* Badge */}
         <div className="mb-10 px-4 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-full inline-flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-1000">
            <div className="h-2 w-2 rounded-full bg-indigo-400 animate-pulse" />
-           <span className="text-[10px] font-black text-indigo-300 uppercase tracking-[0.2em]">Next-Gen Agile Intelligence</span>
+           <span className="text-[10px] font-black text-indigo-300 uppercase tracking-[0.2em]">Agile Project Management Platform</span>
         </div>
         
         <h1 className="text-6xl md:text-8xl font-black text-white tracking-tighter leading-[0.9] mb-8 animate-in slide-in-from-bottom-8 fade-in duration-1000">
-          Orchestrate Your <br/>
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-400 bg-[length:200%_auto] animate-gradient-x">Engineering Vision.</span>
+          Manage Projects,{' '}<br/>
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-400 bg-[length:200%_auto] animate-gradient-x">Faster Than Ever.</span>
         </h1>
         
         <p className="text-lg md:text-xl text-slate-400 font-medium max-w-2xl mb-12 animate-in slide-in-from-bottom-10 fade-in duration-1000 delay-200 leading-relaxed">
-          WattBoard is the ultimate mission control for high-performance teams. 
-          Manage sprints, track real-time velocity, and ship at the speed of thought.
+          WattBoard helps your team plan sprints, track tickets, and ship projects on time — all in one place.
         </p>
         
         <div className="flex flex-col sm:flex-row items-center gap-6 animate-in slide-in-from-bottom-12 fade-in duration-1000 delay-500">
           <Link href="/signup">
             <button className="group relative flex items-center gap-3 px-10 py-5 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-indigo-500 hover:shadow-[0_20px_50px_rgba(79,70,229,0.3)] transition-all active:scale-95 overflow-hidden">
                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-               <span>Start Free Trial</span>
+               <span>Get Started Free</span>
                <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
             </button>
           </Link>
           <Link href="/login">
             <button className="px-10 py-5 bg-white/5 border border-white/10 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-white/10 hover:border-white/20 transition-all backdrop-blur-sm">
-              Login to Account
+              Sign In
             </button>
           </Link>
         </div>
@@ -338,8 +337,8 @@ export default function LandingPage() {
       {/* Pricing Section */}
       <div id="pricing" className="relative w-full max-w-7xl px-6 py-32 animate-in fade-in slide-in-from-bottom-20 duration-1000 delay-1000 scroll-mt-20">
          <div className="text-center mb-20">
-            <h2 className="text-4xl md:text-6xl font-black text-white tracking-tighter mb-6 uppercase">Scale Your Output</h2>
-            <p className="text-slate-400 font-medium max-w-xl mx-auto mb-10">Choose the protocol that fits your engineering velocity. No hidden latency, just pure performance.</p>
+            <h2 className="text-4xl md:text-6xl font-black text-white tracking-tighter mb-6 uppercase">Simple Pricing</h2>
+            <p className="text-slate-400 font-medium max-w-xl mx-auto mb-10">Choose the plan that fits your team. No hidden fees, cancel anytime.</p>
             
             {/* Monthly/Yearly Toggle */}
             <div className="flex items-center justify-center gap-4">
@@ -377,7 +376,7 @@ export default function LandingPage() {
                     </li>
                   ))}
                </ul>
-               <button className="w-full py-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black text-white uppercase tracking-[0.2em] hover:bg-white/10 transition-all">Start Solo Session</button>
+               <button className="w-full py-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black text-white uppercase tracking-[0.2em] hover:bg-white/10 transition-all">Get Started</button>
             </div>
 
             {/* Pro Plan */}
@@ -403,7 +402,7 @@ export default function LandingPage() {
                     </li>
                   ))}
                </ul>
-               <button className="w-full py-4 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-500 hover:shadow-lg hover:shadow-indigo-600/20 transition-all">Initialize Pro Squad</button>
+               <button className="w-full py-4 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-500 hover:shadow-lg hover:shadow-indigo-600/20 transition-all">Get Pro Plan</button>
             </div>
 
             {/* Enterprise Plan */}
@@ -426,7 +425,7 @@ export default function LandingPage() {
                     </li>
                   ))}
                </ul>
-               <button className="w-full py-4 bg-white text-slate-950 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-50 transition-all">Contact Intelligence</button>
+               <button className="w-full py-4 bg-white text-slate-950 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-50 transition-all">Contact Sales</button>
             </div>
          </div>
       </div>
