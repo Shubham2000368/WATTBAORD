@@ -11,10 +11,18 @@ const PORT = process.env.PORT || 5001;
 app.use(cors());
 app.use(express.json());
 
+let lastDbError = null;
+
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/wattflow')
-  .then(() => console.log('✅ Connected to MongoDB'))
-  .catch(err => console.error('❌ MongoDB Connection Error:', err));
+  .then(() => {
+    console.log('✅ Connected to MongoDB');
+    lastDbError = null;
+  })
+  .catch(err => {
+    console.error('❌ MongoDB Connection Error:', err);
+    lastDbError = err.message;
+  });
 
 // Initialize Cron Jobs
 require('./cron/sprintRollover');
@@ -101,8 +109,9 @@ app.use('/api/users', users);
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
-    service: 'WattFlow Backend',
+    service: 'WattBoard Backend',
     database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
+    dbError: lastDbError,
     timestamp: new Date().toISOString()
   });
 });
