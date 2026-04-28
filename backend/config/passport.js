@@ -30,7 +30,7 @@ passport.use(
         }
 
         // Automatic Team Assignment for @wattmonk.com domain
-        if (isWattMonkDomain && !user.team) {
+        if (isWattMonkDomain) {
           const teamName = 'WattMonk Team';
           let team = await Team.findOne({ name: teamName });
 
@@ -39,7 +39,6 @@ passport.use(
             const admin = await User.findOne({ role: 'admin' });
             const initialMembers = [{ user: user._id, role: 'member' }];
 
-            // If an admin exists and is not the current user, add them as an admin member
             if (admin && admin._id.toString() !== user._id.toString()) {
               initialMembers.push({ user: admin._id, role: 'admin' });
             }
@@ -53,11 +52,20 @@ passport.use(
           } else {
             // Add to existing team members if not already there
             const isMember = team.members.some(
-              (m) => m.user.toString() === user._id.toString()
+              (m) => m.user && m.user.toString() === user._id.toString()
             );
             if (!isMember) {
               team.members.push({ user: user._id, role: 'member' });
               await team.save();
+            }
+          }
+
+          // If user was in a DIFFERENT team before, remove them from there
+          if (user.team && user.team.toString() !== team._id.toString()) {
+            const oldTeam = await Team.findById(user.team);
+            if (oldTeam) {
+              oldTeam.members = oldTeam.members.filter(m => m.user && m.user.toString() !== user._id.toString());
+              await oldTeam.save();
             }
           }
 
