@@ -31,23 +31,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const validateToken = async () => {
       const storedToken = localStorage.getItem('token');
-      const storedUser = localStorage.getItem('user');
 
-      if (!storedToken || !storedUser) {
+      if (!storedToken) {
         setLoading(false);
         return;
       }
 
       try {
-        // Validate token against the backend
+        // Validate token against the backend and fetch latest user profile
         const res = await fetch(`${API_BASE_URL}/auth/me`, {
           headers: { Authorization: `Bearer ${storedToken}` },
         });
 
         if (res.ok) {
-          // Token is valid
+          // Token is valid, get the latest user data
+          const data = await res.json();
+          const userData = data.data;
+
           setToken(storedToken);
-          setUser(JSON.parse(storedUser));
+          setUser(userData);
+          localStorage.setItem('user', JSON.stringify(userData));
         } else {
           // Token is invalid or expired — clear everything
           console.warn('Stored token is invalid, clearing session...');
@@ -55,9 +58,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           localStorage.removeItem('user');
         }
       } catch (err) {
-        // Network error — still set the token optimistically
+        // Network error — still set the token optimistically if we have a cached user
+        const storedUser = localStorage.getItem('user');
         setToken(storedToken);
-        setUser(JSON.parse(storedUser));
+        if (storedUser) setUser(JSON.parse(storedUser));
       } finally {
         setLoading(false);
       }

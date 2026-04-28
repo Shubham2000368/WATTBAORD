@@ -35,10 +35,12 @@ import {
 import Link from 'next/link';
 
 const COLORS = ['#94a3b8', '#3b82f6', '#a855f7', '#f97316', '#e11d48', '#10b981', '#ec4899'];
+import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
   const [stats, setStats] = useState({
     totalProjects: 0,
     totalTickets: 0,
@@ -125,10 +127,13 @@ export default function DashboardPage() {
       // Live sync every 30 seconds
       const interval = setInterval(fetchDashboardData, 30000);
       return () => clearInterval(interval);
+    } else if (!authLoading) {
+      // Not authenticated and auth finished loading
+      router.replace('/login');
     }
-  }, [user]);
+  }, [user, authLoading, router]);
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
