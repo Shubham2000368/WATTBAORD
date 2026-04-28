@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const assignUserToTeam = require('../utils/teamAssignment');
 
 // Helper function to create token and send response
 const sendTokenResponse = (user, statusCode, res) => {
@@ -27,6 +28,7 @@ exports.register = async (req, res, next) => {
   try {
     const { name, email, password, role } = req.body;
 
+    console.log(`[AuthController] Registering new user: ${email}`);
     // Create user
     const user = await User.create({
       name,
@@ -34,6 +36,9 @@ exports.register = async (req, res, next) => {
       password,
       role,
     });
+
+    // Automatic Team Assignment
+    await assignUserToTeam(user);
 
     sendTokenResponse(user, 201, res);
   } catch (err) {
@@ -79,9 +84,19 @@ exports.login = async (req, res, next) => {
 exports.getMe = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    // Fallback: If user has no team, auto-assign one
+    if (!user.team) {
+      await assignUserToTeam(user);
+    }
 
     res.status(200).json({
       success: true,
+      version: '1.0.5-team-fix',
       data: user,
     });
   } catch (err) {
