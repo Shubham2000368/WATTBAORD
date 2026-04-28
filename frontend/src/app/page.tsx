@@ -114,10 +114,10 @@ export default function LandingPage() {
               <div className="h-14 w-14 bg-indigo-500/10 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 group-hover:bg-indigo-500/20 transition-all duration-500">
                  <Zap className="h-7 w-7 text-indigo-400" />
               </div>
-              <h3 className="text-2xl font-black text-white mb-4 tracking-tighter uppercase">Hyper-Velocity</h3>
-              <p className="text-sm text-slate-500 font-bold leading-relaxed mb-6">Built for speed. Instant updates, real-time sync, and Zero Latency™ data processing for your tickets.</p>
+              <h3 className="text-2xl font-black text-white mb-4 tracking-tighter uppercase">Lightning Fast</h3>
+              <p className="text-sm text-slate-500 font-bold leading-relaxed mb-6">Built for speed. Instant updates and real-time sync across all your tickets and team members.</p>
               <div className="flex items-center gap-2 text-indigo-400 text-[10px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
-                <span>View Engine Specs</span>
+                <span>Learn More</span>
                 <ArrowRight size={12} />
               </div>
            </div>
@@ -126,10 +126,10 @@ export default function LandingPage() {
               <div className="h-14 w-14 bg-purple-500/10 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 group-hover:bg-purple-500/20 transition-all duration-500">
                  <Shield className="h-7 w-7 text-purple-400" />
               </div>
-              <h3 className="text-2xl font-black text-white mb-4 tracking-tighter uppercase">Hardened Core</h3>
-              <p className="text-sm text-slate-500 font-bold leading-relaxed mb-6">Enterprise-grade security with quantum-safe encryption protocols for your mission critical engineering IP.</p>
+              <h3 className="text-2xl font-black text-white mb-4 tracking-tighter uppercase">Secure by Default</h3>
+              <p className="text-sm text-slate-500 font-bold leading-relaxed mb-6">Enterprise-grade security with role-based access control to keep your team data safe.</p>
               <div className="flex items-center gap-2 text-purple-400 text-[10px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
-                <span>Security Audit</span>
+                <span>Learn More</span>
                 <ArrowRight size={12} />
               </div>
            </div>
@@ -138,10 +138,10 @@ export default function LandingPage() {
               <div className="h-14 w-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 group-hover:bg-emerald-500/20 transition-all duration-500">
                  <Layers className="h-7 w-7 text-emerald-400" />
               </div>
-              <h3 className="text-2xl font-black text-white mb-4 tracking-tighter uppercase">Universal Sync</h3>
-              <p className="text-sm text-slate-500 font-bold leading-relaxed mb-6">Connect teams across the globe with unified dashboards, automated reporting and multi-tenant intelligence.</p>
+              <h3 className="text-2xl font-black text-white mb-4 tracking-tighter uppercase">Team Collaboration</h3>
+              <p className="text-sm text-slate-500 font-bold leading-relaxed mb-6">Connect your entire team with unified dashboards, sprint reports, and project access management.</p>
               <div className="flex items-center gap-2 text-emerald-400 text-[10px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
-                <span>Global Nodes</span>
+                <span>Learn More</span>
                 <ArrowRight size={12} />
               </div>
            </div>
