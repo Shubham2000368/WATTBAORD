@@ -14,9 +14,6 @@ function GoogleSuccessContent() {
   const processed = useRef(false);
 
   useEffect(() => {
-    const handleSuccess = async () => {
-      if (processed.current) return;
-      
       const token = searchParams.get('token');
       const error = searchParams.get('error');
 
@@ -28,21 +25,15 @@ function GoogleSuccessContent() {
       if (token) {
         processed.current = true;
         try {
-          // Fetch user data immediately to avoid race condition in AuthContext
-          const res = await fetch(`${API_BASE_URL}/auth/me`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-
-          if (res.ok) {
-            const data = await res.json();
-            // This updates global state AND redirects to dashboard
-            login(token, data.data);
-          } else {
-            router.replace('/login?error=token_invalid');
-          }
+          // 1. Immediately store token
+          localStorage.setItem('token', token);
+          
+          // 2. Redirect to dashboard
+          // The AuthContext will pick up the token and fetch user details on mount
+          router.replace('/dashboard');
         } catch (err) {
-          console.error('Auth verification failed:', err);
-          router.replace('/login?error=verification_failed');
+          console.error('Failed to store token:', err);
+          router.replace('/login?error=storage_failed');
         }
       } else {
         router.replace('/login?error=no_token');
