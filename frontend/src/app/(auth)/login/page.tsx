@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { API_BASE_URL } from '@/config/api';
+import { useRouter } from 'next/navigation';
 import { GoogleAuthButton } from '@/components/GoogleAuthButton';
 import { 
   Sparkles, 
@@ -54,11 +55,6 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleGoogleLogin = () => {
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'https://wattbaord.onrender.com';
-    window.location.href = `${backendUrl}/api/auth/google`;
   };
 
   if (authLoading) {

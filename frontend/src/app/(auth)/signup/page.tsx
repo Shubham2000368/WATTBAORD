@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { GoogleAuthButton } from '@/components/GoogleAuthButton';
 import {
   Sparkles,
-  User,
+  User as UserIcon,
   Mail,
   Lock,
   ArrowRight,
@@ -17,6 +17,13 @@ import {
   ChevronRight,
 } from 'lucide-react';
 
+export default function SignupPage() {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  
   const { login, user, loading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -107,7 +114,7 @@ import {
             {/* Full Name */}
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-4">
-                <User size={12} className="text-indigo-400" />
+                <UserIcon size={12} className="text-indigo-400" />
                 <span>Full Name</span>
               </label>
               <input
