@@ -36,7 +36,16 @@ router.get(
 // Step 2: Google callback after user grants permission
 router.get(
   '/google/callback',
-  passport.authenticate('google', { session: false, failureRedirect: `${process.env.FRONTEND_URL}/login?error=google_failed` }),
+  (req, res, next) => {
+    const FRONTEND_BASE_URL = process.env.NODE_ENV === "production"
+      ? "https://wattbaord-3.onrender.com"
+      : (process.env.FRONTEND_URL || "http://localhost:3000");
+    
+    passport.authenticate('google', { 
+      session: false, 
+      failureRedirect: `${FRONTEND_BASE_URL}/login?error=google_failed` 
+    })(req, res, next);
+  },
   (req, res) => {
     try {
       // Generate JWT token for the authenticated user
@@ -46,12 +55,18 @@ router.get(
         { expiresIn: '30d' }
       );
 
-      // Redirect to frontend with token in query param
-      const frontendUrl = process.env.FRONTEND_URL || 'https://wattbaord-3.onrender.com';
-      res.redirect(`${frontendUrl}/auth/google-success?token=${token}`);
+      // Environment-based config for Frontend Redirect
+      const FRONTEND_BASE_URL = process.env.NODE_ENV === "production"
+        ? "https://wattbaord-3.onrender.com"
+        : (process.env.FRONTEND_URL || "http://localhost:3000");
+
+      res.redirect(`${FRONTEND_BASE_URL}/auth/google-success?token=${token}`);
     } catch (err) {
       console.error('[Google OAuth Callback] Error:', err.message);
-      res.redirect(`${process.env.FRONTEND_URL}/login?error=token_failed`);
+      const FRONTEND_BASE_URL = process.env.NODE_ENV === "production"
+        ? "https://wattbaord-3.onrender.com"
+        : (process.env.FRONTEND_URL || "http://localhost:3000");
+      res.redirect(`${FRONTEND_BASE_URL}/login?error=token_failed`);
     }
   }
 );
