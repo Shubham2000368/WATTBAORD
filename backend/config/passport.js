@@ -29,11 +29,11 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
               password: `google_${profile.id}_${Date.now()}`, // Dummy password for OAuth users
               role: 'user',
             });
-          }
 
-          // Automatic Team Assignment using utility
-          const assignUserToTeam = require('../utils/teamAssignment');
-          await assignUserToTeam(user);
+            // Automatic Team Assignment using utility
+            const assignUserToTeam = require('../utils/teamAssignment');
+            await assignUserToTeam(user);
+          }
 
           return done(null, user);
         } catch (err) {

@@ -41,12 +41,17 @@ const assignUserToTeam = async (user) => {
     } else {
       console.log(`[TeamAssignment] Found team: ${team.name} (${team._id})`);
       
-      // 3. Add User to Team Members (Atomic)
-      // Use findOneAndUpdate with $addToSet to avoid duplicates and race conditions
-      await Team.findByIdAndUpdate(team._id, {
-        $addToSet: { members: { user: user._id, role: 'member' } }
-      });
-      console.log(`[TeamAssignment] User added to members array.`);
+      // 3. Add User to Team Members (Idempotent)
+      const isAlreadyMember = team.members.some(m => m.user && m.user.toString() === userId);
+      
+      if (!isAlreadyMember) {
+        await Team.findByIdAndUpdate(team._id, {
+          $push: { members: { user: user._id, role: 'member' } }
+        });
+        console.log(`[TeamAssignment] User added to members array.`);
+      } else {
+        console.log(`[TeamAssignment] User is already a member of this team.`);
+      }
     }
 
     // 4. Link User to Team
