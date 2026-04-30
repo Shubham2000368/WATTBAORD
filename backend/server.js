@@ -9,6 +9,7 @@ const PORT = process.env.PORT || 5001;
 
 const passport = require('passport');
 require('./config/passport'); // Load Google Strategy
+require('./cron/sprintCron'); // Start Sprint Rollover Cron Job
 
 // Middleware
 app.use(cors());
