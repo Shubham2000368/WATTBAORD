@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useRouter } from 'next/navigation';
 import { 
   ChevronLeft, 
@@ -42,6 +43,8 @@ export default function TeamDetailsPage() {
   const [openAccessDropdown, setOpenAccessDropdown] = useState<string | null>(null);
   const [localAccessState, setLocalAccessState] = useState<Record<string, boolean>>({});
   const [isSavingAccess, setIsSavingAccess] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number, left: number } | null>(null);
+  const triggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const currentUserMember = team?.members.find(m => m && m.user && m.user._id === user?.id);
   const isAdmin = user?.role?.toLowerCase() === 'admin' || currentUserMember?.role?.toLowerCase() === 'admin' || team?.lead?._id === user?.id;
@@ -348,11 +351,19 @@ export default function TeamDetailsPage() {
                                 {isAdmin && member.user._id !== user?.id ? (
                                   <>
                                     <button 
-                                      onClick={() => {
+                                      ref={el => { if (el) triggerRefs.current[member.user._id] = el; }}
+                                      onClick={(e) => {
                                         if (openAccessDropdown === member.user._id) {
                                           setOpenAccessDropdown(null);
+                                          setDropdownPos(null);
                                         } else {
+                                          const rect = e.currentTarget.getBoundingClientRect();
+                                          setDropdownPos({
+                                            top: rect.bottom + window.scrollY,
+                                            left: rect.left + window.scrollX
+                                          });
                                           setOpenAccessDropdown(member.user._id);
+                                          
                                           const initialState: Record<string, boolean> = {};
                                           projects.forEach(p => {
                                             const projMember = p.members?.find(m => {
@@ -379,54 +390,61 @@ export default function TeamDetailsPage() {
                                       })</span>
                                     </button>
                                     
-                                    {openAccessDropdown === member.user._id && (
+                                    {openAccessDropdown === member.user._id && dropdownPos && createPortal(
                                       <>
-                                        <div className="fixed inset-0 z-40 bg-slate-900/10 backdrop-blur-[2px]" onClick={() => setOpenAccessDropdown(null)} />
-                                        <div className="absolute top-full left-0 mt-3 w-80 bg-white rounded-[2rem] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.15)] border border-slate-100 z-50 p-3 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
+                                        <div className="fixed inset-0 z-[9998] bg-slate-900/10 backdrop-blur-[2px]" onClick={() => { setOpenAccessDropdown(null); setDropdownPos(null); }} />
+                                        <div 
+                                          className="absolute w-80 bg-white rounded-[2rem] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.15)] border border-slate-100 z-[9999] p-3 overflow-visible animate-in fade-in slide-in-from-top-4 duration-300"
+                                          style={{
+                                            top: dropdownPos.top + 12,
+                                            left: dropdownPos.left
+                                          }}
+                                        >
                                           <div className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 mb-3 flex items-center justify-between">
                                             <span>Project Permissions</span>
                                             <FolderOpen size={14} />
                                           </div>
-                                            <div className="space-y-1.5 max-h-[280px] overflow-y-auto pr-1 custom-scrollbar">
-                                              {projects.map(proj => {
-                                                const hasAccess = localAccessState[proj._id] ?? false;
-                                                return (
-                                                  <label 
-                                                    key={proj._id} 
-                                                    className={`flex items-center justify-between p-3.5 rounded-2xl transition-all cursor-pointer group relative border ${hasAccess ? 'bg-indigo-50/50 border-indigo-100' : 'bg-white border-transparent hover:bg-slate-50'}`}
-                                                  >
-                                                    <div className="flex flex-col truncate pr-3">
-                                                      <span className={`text-[11px] font-black truncate ${hasAccess ? 'text-indigo-700' : 'text-slate-700'}`}>{proj.name}</span>
-                                                      <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">{proj.key}</span>
+                                          <div className="space-y-1.5 max-h-[280px] overflow-y-auto pr-1 custom-scrollbar">
+                                            {projects.map(proj => {
+                                              const hasAccess = localAccessState[proj._id] ?? false;
+                                              return (
+                                                <label 
+                                                  key={proj._id} 
+                                                  className={`flex items-center justify-between p-3.5 rounded-2xl transition-all cursor-pointer group relative border ${hasAccess ? 'bg-indigo-50/50 border-indigo-100' : 'bg-white border-transparent hover:bg-slate-50'}`}
+                                                >
+                                                  <div className="flex flex-col truncate pr-3">
+                                                    <span className={`text-[11px] font-black truncate ${hasAccess ? 'text-indigo-700' : 'text-slate-700'}`}>{proj.name}</span>
+                                                    <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">{proj.key}</span>
+                                                  </div>
+                                                  <div className="flex items-center gap-3">
+                                                    <div className="relative flex items-center">
+                                                      <input 
+                                                        type="checkbox" 
+                                                        checked={hasAccess} 
+                                                        onChange={(e) => setLocalAccessState(prev => ({ ...prev, [proj._id]: e.target.checked }))}
+                                                        className="w-6 h-6 rounded-lg shadow-inner focus:ring-2 focus:ring-indigo-500 cursor-pointer appearance-none border-2 transition-all checked:bg-indigo-600 checked:border-indigo-600 bg-slate-100 border-slate-200"
+                                                      />
+                                                      {hasAccess && (
+                                                        <CheckCircle2 size={16} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white pointer-events-none" />
+                                                      )}
                                                     </div>
-                                                    <div className="flex items-center gap-3">
-                                                      <div className="relative flex items-center">
-                                                        <input 
-                                                          type="checkbox" 
-                                                          checked={hasAccess} 
-                                                          onChange={(e) => setLocalAccessState(prev => ({ ...prev, [proj._id]: e.target.checked }))}
-                                                          className="w-6 h-6 rounded-lg shadow-inner focus:ring-2 focus:ring-indigo-500 cursor-pointer appearance-none border-2 transition-all checked:bg-indigo-600 checked:border-indigo-600 bg-slate-100 border-slate-200"
-                                                        />
-                                                        {hasAccess && (
-                                                          <CheckCircle2 size={16} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white pointer-events-none" />
-                                                        )}
-                                                      </div>
-                                                    </div>
-                                                  </label>
-                                                );
-                                              })}
-                                            </div>
-                                            <div className="p-3 border-t border-slate-50 mt-4">
-                                              <button 
-                                                onClick={() => handleSaveAccess(member.user._id)}
-                                                disabled={isSavingAccess}
-                                                className="w-full py-3.5 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50 shadow-xl shadow-slate-100"
-                                              >
-                                                {isSavingAccess ? <Loader2 size={16} className="animate-spin" /> : <><CheckCircle2 size={16} /> Save Manifest</>}
-                                              </button>
-                                            </div>
+                                                  </div>
+                                                </label>
+                                              );
+                                            })}
+                                          </div>
+                                          <div className="p-3 border-t border-slate-50 mt-4">
+                                            <button 
+                                              onClick={() => handleSaveAccess(member.user._id)}
+                                              disabled={isSavingAccess}
+                                              className="w-full py-3.5 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50 shadow-xl shadow-slate-100"
+                                            >
+                                              {isSavingAccess ? <Loader2 size={16} className="animate-spin" /> : <><CheckCircle2 size={16} /> Save Manifest</>}
+                                            </button>
+                                          </div>
                                         </div>
-                                      </>
+                                      </>,
+                                      document.body
                                     )}
                                   </>
                                 ) : (
