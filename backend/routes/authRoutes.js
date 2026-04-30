@@ -18,7 +18,7 @@ const router = express.Router();
 // Existing auth routes
 router.post('/register', register);
 router.post('/login', login);
-router.post('/forgotpassword', forgotPassword);
+router.post('/forgot-password', forgotPassword);
 router.put('/resetpassword/:resettoken', resetPassword);
 router.get('/me', protect, getMe);
 router.get('/users', protect, getAllUsers);

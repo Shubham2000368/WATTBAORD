@@ -243,6 +243,16 @@ exports.forgotPassword = async (req, res, next) => {
       });
     } catch (err) {
       console.error('Email Error:', err.message);
+      
+      // In development, we return success but with the URL so the user can test
+      if (process.env.NODE_ENV !== 'production') {
+        return res.status(200).json({
+          success: true,
+          data: 'Email failed to send locally, but here is your reset link (Dev Mode)',
+          resetUrl: resetUrl
+        });
+      }
+
       user.resetPasswordToken = undefined;
       user.resetPasswordExpire = undefined;
       await user.save({ validateBeforeSave: false });
