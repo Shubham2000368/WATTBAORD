@@ -10,7 +10,7 @@ import { API_BASE_URL } from '@/config/api';
 function GoogleSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login } = useAuth();
+  const { revalidate } = useAuth();
   const processed = useRef(false);
 
   useEffect(() => {
@@ -24,21 +24,26 @@ function GoogleSuccessContent() {
 
       if (token) {
         processed.current = true;
-        try {
-          // 1. Immediately store token
-          localStorage.setItem('token', token);
-          
-          // 2. Redirect to dashboard
-          // The AuthContext will pick up the token and fetch user details on mount
-          router.replace('/dashboard');
-        } catch (err) {
-          console.error('Failed to store token:', err);
-          router.replace('/login?error=storage_failed');
-        }
+        const handleSuccess = async () => {
+          try {
+            // 1. Immediately store token
+            localStorage.setItem('token', token);
+            
+            // 2. Revalidate to update AuthContext immediately
+            await revalidate();
+            
+            // 3. Redirect to dashboard
+            router.replace('/dashboard');
+          } catch (err) {
+            console.error('Failed to store token:', err);
+            router.replace('/login?error=storage_failed');
+          }
+        };
+        handleSuccess();
       } else {
         router.replace('/login?error=no_token');
       }
-  }, [searchParams, router, login]);
+  }, [searchParams, router, revalidate]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-950">

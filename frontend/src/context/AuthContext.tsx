@@ -18,6 +18,7 @@ interface AuthContextType {
   loading: boolean;
   login: (token: string, user: User) => void;
   logout: () => void;
+  revalidate: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -93,8 +94,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push('/login');
   };
 
+  const revalidate = async () => {
+    // Manually trigger token validation
+    const storedToken = localStorage.getItem('token');
+    if (!storedToken) {
+      setToken(null);
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_BASE_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${storedToken}` },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setToken(storedToken);
+        setUser(data.data);
+        localStorage.setItem('user', JSON.stringify(data.data));
+      } else {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setToken(null);
+        setUser(null);
+      }
+    } catch (err) {
+      console.error('Revalidation failed:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout, revalidate }}>
       {children}
     </AuthContext.Provider>
   );
