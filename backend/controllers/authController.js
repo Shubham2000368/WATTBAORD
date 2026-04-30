@@ -84,7 +84,7 @@ exports.login = async (req, res, next) => {
 exports.getMe = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id);
-    
+
     if (!user) {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
@@ -243,7 +243,7 @@ exports.forgotPassword = async (req, res, next) => {
       });
     } catch (err) {
       console.error('Email Error:', err.message);
-      
+
       // In development, we return success but with the URL so the user can test
       if (process.env.NODE_ENV !== 'production') {
         return res.status(200).json({
