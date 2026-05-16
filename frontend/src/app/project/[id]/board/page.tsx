@@ -120,7 +120,7 @@ export default function BoardPage() {
     }
   };
 
-  const BACKLOG_SPRINT_STATUSES = ['TO BE GROOMED', 'GROOMED', 'READY FOR SPRINT', 'IN SPRINT'];
+  const BACKLOG_SPRINT_STATUSES = ['TODO', 'TO BE GROOMED', 'GROOMED', 'READY FOR SPRINT', 'IN SPRINT', 'COMPLETED', 'BLOCKED'];
 
   const filteredTickets = selectedSprint === 'all' 
     ? tickets 
@@ -129,15 +129,17 @@ export default function BoardPage() {
         .filter(t => !t.sprint)
         .map(t => ({
           ...t,
-          // If ticket has a non-backlog status, normalize it to TO BE GROOMED
-          status: BACKLOG_SPRINT_STATUSES.includes(t.status) ? t.status : 'TO BE GROOMED'
+          // If ticket has a non-backlog status, normalize it to TODO (or keep if valid)
+          status: BACKLOG_SPRINT_STATUSES.includes(t.status) ? t.status : 'TODO'
         }))
     : tickets.filter(t => (typeof t.sprint === 'object' ? t.sprint?._id : t.sprint) === selectedSprint);
 
   const backlogColumns = [
+    { status: 'TODO', title: 'To Do', color: 'bg-slate-500', icon: '📝' },
     { status: 'TO BE GROOMED', title: 'To Be Groomed', color: 'bg-slate-400', icon: '📋' },
     { status: 'GROOMED', title: 'Groomed', color: 'bg-blue-500', icon: '💎' },
-    { status: 'READY FOR SPRINT', title: 'Ready for Sprint', color: 'bg-purple-600', icon: '🚀' }
+    { status: 'READY FOR SPRINT', title: 'Ready for Sprint', color: 'bg-purple-600', icon: '🚀' },
+    { status: 'COMPLETED', title: 'Completed', color: 'bg-emerald-500', icon: '✅' }
   ];
 
   if (authLoading || (loading && !project)) {
