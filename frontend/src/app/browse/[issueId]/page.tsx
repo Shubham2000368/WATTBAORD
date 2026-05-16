@@ -600,12 +600,10 @@ export default function IssueDetailPage() {
                        <label className="text-[11px] font-bold text-slate-400 uppercase tracking-tight">Status</label>
                        <select value={ticket.status} onChange={(e) => handleStatusChange(e.target.value as TicketStatus)} className={cn("col-span-2 px-3 py-1.5 rounded-lg font-bold text-xs border-none shadow-sm cursor-pointer outline-none transition-all", STATUS_CONFIG[ticket.status].bg, STATUS_CONFIG[ticket.status].color)}>
                          {Object.entries(STATUS_CONFIG).filter(([val]) => {
-                           const backlogStatuses = ['TO BE GROOMED', 'GROOMED', 'READY FOR SPRINT', 'IN SPRINT'];
+                           const backlogStatuses = ['TODO', 'TO BE GROOMED', 'GROOMED', 'READY FOR SPRINT', 'IN SPRINT', 'COMPLETED', 'BLOCKED'];
                            if (ticket.sprint) {
-                             // Sprint ticket: show only normal sprint statuses
-                             return !backlogStatuses.includes(val);
+                             return !backlogStatuses.includes(val) || val === 'COMPLETED' || val === 'BLOCKED';
                            } else {
-                             // Backlog ticket: show only backlog statuses
                              return backlogStatuses.includes(val);
                            }
                          }).map(([val, cfg]) => <option key={val} value={val}>{cfg.label}</option>)}
@@ -624,6 +622,15 @@ export default function IssueDetailPage() {
                          </button>
                        </div>
                      )}
+                     <div className="grid grid-cols-3 items-center gap-4">
+                       <label className="text-[11px] font-bold text-slate-400 uppercase tracking-tight">Type</label>
+                       <select value={ticket.type} onChange={(e) => handleTypeChange(e.target.value)} className="col-span-2 w-full bg-white border border-slate-100 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-700 outline-none">
+                          <option value="Task">✅ Task</option>
+                          <option value="Bug">🐛 Bug</option>
+                          <option value="Story">📖 Story</option>
+                          <option value="Subtask">✨ Subtask</option>
+                       </select>
+                     </div>
                      <div className="grid grid-cols-3 items-center gap-4">
                        <label className="text-[11px] font-bold text-slate-400 uppercase tracking-tight">Priority</label>
                        <select value={ticket.priority} onChange={(e) => handlePriorityChange(e.target.value)} className="col-span-2 w-full bg-white border border-slate-100 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-700 outline-none">
