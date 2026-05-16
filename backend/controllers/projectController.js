@@ -158,6 +158,12 @@ exports.deleteProject = async (req, res, next) => {
       return res.status(403).json({ success: false, error: 'User not authorized to delete this project' });
     }
 
+    // Cascade delete: Remove all tickets and sprints associated with this project
+    const Ticket = require('../models/Ticket');
+    const Sprint = require('../models/Sprint');
+    await Ticket.deleteMany({ project: req.params.id });
+    await Sprint.deleteMany({ project: req.params.id });
+
     await project.deleteOne();
 
     res.status(200).json({
