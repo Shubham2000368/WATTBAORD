@@ -72,7 +72,7 @@ exports.createTicket = async (req, res, next) => {
 
     // Improved issueId generation: Find the highest number for this project and increment it
     const projectKey = project.key || 'TICKET';
-    const tickets = await Ticket.find({ project: req.params.projectId })
+    const tickets = await Ticket.find({ issueId: new RegExp(`^${projectKey}-`, 'i') })
       .select('issueId')
       .lean();
     
