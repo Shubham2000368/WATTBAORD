@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useRef, ReactNode } from 'react';
 import { 
   Project, 
   projectService 
@@ -17,7 +17,11 @@ import {
   Plus, 
   Loader2, 
   AlertCircle,
-  Folder as FolderIcon
+  Folder as FolderIcon,
+  Paperclip,
+  Trash2,
+  Image as ImageIcon,
+  FileText
 } from 'lucide-react';
 
 interface IssueModalContextType {
@@ -53,6 +57,8 @@ export function IssueModalProvider({ children }: { children: ReactNode }) {
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<'Low' | 'Medium' | 'High'>('Medium');
   const [type, setType] = useState<'Task' | 'Bug' | 'Story'>('Task');
+  const [attachmentPreview, setAttachmentPreview] = useState<{url: string, name: string, type: string, size: number} | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const openModal = async () => {
     setIsOpen(true);
@@ -78,6 +84,7 @@ export function IssueModalProvider({ children }: { children: ReactNode }) {
     setTitle('');
     setDescription('');
     setSelectedFolder('');
+    setAttachmentPreview(null);
   };
 
   const fetchSprints = async (projectId: string) => {
@@ -107,6 +114,13 @@ export function IssueModalProvider({ children }: { children: ReactNode }) {
         folder: selectedFolder || undefined
       });
       if (newTicket) {
+        if (attachmentPreview) {
+          try {
+            await ticketService.addAttachment(newTicket._id, attachmentPreview);
+          } catch (e) {
+            console.error('Failed to attach file', e);
+          }
+        }
         closeModal();
         window.location.reload();
       }
@@ -242,6 +256,65 @@ export function IssueModalProvider({ children }: { children: ReactNode }) {
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">Attachment (Optional)</label>
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      className="hidden" 
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setAttachmentPreview({
+                            name: file.name,
+                            size: file.size,
+                            type: file.type,
+                            url: reader.result as string
+                          });
+                        };
+                        reader.readAsDataURL(file);
+                      }} 
+                    />
+                    {!attachmentPreview ? (
+                      <button 
+                        type="button" 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-slate-400 hover:border-indigo-300 hover:bg-indigo-50/30 hover:text-indigo-500 transition-all gap-2"
+                      >
+                        <Paperclip size={24} />
+                        <span className="text-xs font-bold">Click to attach a file</span>
+                      </button>
+                    ) : (
+                      <div className="flex items-center justify-between p-3 border border-indigo-200 bg-indigo-50/50 rounded-2xl">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                           <div className="h-10 w-10 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center shrink-0">
+                             {attachmentPreview.type.startsWith('image/') ? (
+                               <img src={attachmentPreview.url} alt="preview" className="w-full h-full object-contain rounded-lg p-0.5" />
+                             ) : (
+                               <FileText size={20} />
+                             )}
+                           </div>
+                           <div className="flex-1 min-w-0 pr-2">
+                             <p className="text-xs font-bold text-slate-700 truncate">{attachmentPreview.name}</p>
+                             <p className="text-[10px] font-medium text-slate-400">{(attachmentPreview.size / 1024).toFixed(1)} KB</p>
+                           </div>
+                        </div>
+                        <button 
+                          type="button" 
+                          onClick={() => {
+                            setAttachmentPreview(null);
+                            if (fileInputRef.current) fileInputRef.current.value = '';
+                          }} 
+                          className="p-2 text-rose-400 hover:bg-rose-100 hover:text-rose-600 rounded-xl transition-colors shrink-0"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex gap-3 pt-4">

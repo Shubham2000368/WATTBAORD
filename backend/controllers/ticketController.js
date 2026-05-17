@@ -16,14 +16,19 @@ const logActivity = async (ticket, userId, action, details = '') => {
 // @access  Private
 exports.getTickets = async (req, res, next) => {
   try {
-    const { sprintId } = req.query;
+    const { sprintId, folderId } = req.query;
     const query = { project: req.params.projectId };
     
     if (sprintId) {
       query.sprint = sprintId === 'backlog' ? null : sprintId;
     }
+    
+    if (folderId) {
+      query.folder = folderId;
+    }
 
     const tickets = await Ticket.find(query)
+      .select('-attachments -comments -activityLogs')
       .populate('assignees', 'name email')
       .populate('reporter', 'name email')
       .populate('sprint', 'name')
@@ -105,9 +110,15 @@ exports.createTicket = async (req, res, next) => {
     await logActivity(ticket, userId, 'Created the issue');
     await ticket.save();
 
+    const populatedTicket = await Ticket.findById(ticket._id)
+      .populate('assignees', 'name email')
+      .populate('reporter', 'name email')
+      .populate('sprint', 'name')
+      .populate('parent', 'issueId title');
+
     res.status(201).json({
       success: true,
-      data: ticket,
+      data: populatedTicket,
     });
   } catch (err) {
     console.error(`[TicketController] Error in ${req.method} ${req.originalUrl}:`, err);
@@ -262,6 +273,15 @@ exports.updateTicket = async (req, res, next) => {
     const updatedTicket = await Ticket.findById(ticket._id)
       .populate('assignees', 'name email')
       .populate('reporter', 'name email')
+      .populate({
+        path: 'project',
+        select: 'name key members',
+        populate: {
+          path: 'members.user',
+          select: 'name email avatar team'
+        }
+      })
+      .populate('sprint', 'name')
       .populate('comments.user', 'name')
       .populate('activityLogs.user', 'name')
       .populate('parent', 'issueId title');
@@ -343,6 +363,7 @@ exports.addAttachment = async (req, res, next) => {
 exports.getSubtasks = async (req, res, next) => {
   try {
     const subtasks = await Ticket.find({ parent: req.params.id })
+      .select('-attachments -comments -activityLogs')
       .populate('assignees', 'name email')
       .populate('reporter', 'name email');
 
@@ -394,6 +415,7 @@ exports.searchTickets = async (req, res, next) => {
         { description: { $regex: q, $options: 'i' } }
       ]
     })
+    .select('-attachments -comments -activityLogs')
     .limit(10)
     .populate('project', 'name key');
 

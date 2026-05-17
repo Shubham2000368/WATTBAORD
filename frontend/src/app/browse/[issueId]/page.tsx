@@ -70,6 +70,8 @@ export default function IssueDetailPage() {
   const [commentText, setCommentText] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const [subtasks, setSubtasks] = useState<Ticket[]>([]);
   const [isCreatingSubtask, setIsCreatingSubtask] = useState(false);
@@ -264,26 +266,40 @@ export default function IssueDetailPage() {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !ticket) return;
+    
+    setIsUploadingAttachment(true);
+    setError(null);
     try {
       // Convert file to base64 to store it in the database since there is no external file storage
       const reader = new FileReader();
       reader.onloadend = async () => {
-        const base64String = reader.result as string;
-        
-        const attachmentData = {
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          url: base64String
-        };
-        const newAttachment = await ticketService.addAttachment(ticket._id, attachmentData);
-        if (newAttachment) {
-          setTicket(prev => prev ? { ...prev, attachments: [...prev.attachments, newAttachment] } : null);
+        try {
+          const base64String = reader.result as string;
+          
+          const attachmentData = {
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            url: base64String
+          };
+          const newAttachment = await ticketService.addAttachment(ticket._id, attachmentData);
+          if (newAttachment) {
+            setTicket(prev => prev ? { ...prev, attachments: [...prev.attachments, newAttachment] } : null);
+          }
+        } catch (uploadErr: any) {
+          setError(uploadErr.message || 'Failed to upload attachment to server');
+        } finally {
+          setIsUploadingAttachment(false);
         }
+      };
+      reader.onerror = () => {
+        setError('Failed to read file locally');
+        setIsUploadingAttachment(false);
       };
       reader.readAsDataURL(file);
     } catch (err) {
-      setError('Failed to upload attachment');
+      setError('Failed to start file upload');
+      setIsUploadingAttachment(false);
     }
   };
 
@@ -318,13 +334,15 @@ export default function IssueDetailPage() {
   const handleExportSubtasksCSV = () => {
     if (!subtasks || subtasks.length === 0) return;
 
-    const headers = ['Issue ID', 'Title', 'Status', 'Priority', 'Type'];
+    const headers = ['Issue ID', 'Title', 'Status', 'Priority', 'Type', 'Reporter', 'Assignees'];
     const rows = subtasks.map(sub => [
       sub.issueId,
       `"${sub.title.replace(/"/g, '""')}"`,
       sub.status,
       sub.priority,
-      sub.type
+      sub.type,
+      `"${sub.reporter?.name || ''}"`,
+      `"${sub.assignees?.map(a => a.name).join(', ') || ''}"`
     ]);
 
     const csvContent = [
@@ -353,12 +371,17 @@ export default function IssueDetailPage() {
       newAssignees = [...ticket.assignees, user];
     }
 
+    // Optimistic UI update
+    setTicket({ ...ticket, assignees: newAssignees });
+
     try {
       const updated = await ticketService.updateTicket(ticket._id, { assignees: newAssignees.map(a => a._id) as any });
       if (updated) {
         setTicket(updated);
       }
     } catch (err) {
+      // Revert on failure
+      setTicket(ticket);
       setError('Failed to update assignees');
     }
   };
@@ -500,15 +523,15 @@ export default function IssueDetailPage() {
                   <MessageSquare size={16} />
                   <span>Comment</span>
                </button>
-               <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg text-sm font-bold transition-all border border-slate-200">
-                  <Paperclip size={16} />
-                  <span>Attach</span>
+               <button onClick={() => fileInputRef.current?.click()} disabled={isUploadingAttachment} className="flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg text-sm font-bold transition-all border border-slate-200 disabled:opacity-50">
+                  {isUploadingAttachment ? <Loader2 size={16} className="animate-spin" /> : <Paperclip size={16} />}
+                  <span>{isUploadingAttachment ? 'Attaching...' : 'Attach'}</span>
                </button>
                <button onClick={() => setIsCreatingSubtask(true)} className="flex items-center gap-2 px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-600 rounded-lg text-sm font-bold transition-all border border-purple-200">
                   <Sparkles size={16} />
                   <span>Add Subtask</span>
                 </button>
-               <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
+               <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} onClick={(e) => { (e.target as HTMLInputElement).value = '' }} />
             </div>
 
             <div className="mb-12">
@@ -585,26 +608,42 @@ export default function IssueDetailPage() {
                   <Paperclip size={16} />
                   <span>Attachments</span>
                 </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div className="flex flex-wrap gap-6">
                   {ticket.attachments.map(att => (
-                    <a key={att._id} href={att.url} target="_blank" rel="noopener noreferrer" className="flex flex-col gap-2 p-3 border border-slate-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50/30 transition-all group overflow-hidden">
+                    <div 
+                      key={att._id} 
+                      onClick={() => {
+                        if (att.type.startsWith('image/')) {
+                          setPreviewImage(att.url);
+                        } else {
+                          const a = document.createElement('a');
+                          a.href = att.url;
+                          a.download = att.name;
+                          a.click();
+                        }
+                      }}
+                      className="flex flex-col gap-2 p-3 border border-slate-200 rounded-2xl hover:border-indigo-300 hover:shadow-xl hover:shadow-indigo-500/10 hover:scale-[1.02] bg-white transition-all group overflow-hidden cursor-pointer w-64"
+                    >
                       {att.type.startsWith('image/') ? (
-                        <div className="w-full h-24 bg-slate-100 rounded-lg overflow-hidden border border-slate-200 shrink-0">
-                          <img src={att.url} alt={att.name} className="w-full h-full object-cover" />
+                        <div className="w-full h-40 bg-slate-900/5 rounded-xl overflow-hidden border border-slate-100 shrink-0 p-1">
+                          <img src={att.url} alt={att.name} className="w-full h-full object-contain rounded-lg" />
                         </div>
                       ) : (
-                        <div className="w-full h-24 bg-indigo-50 text-indigo-400 rounded-lg flex items-center justify-center shrink-0 border border-indigo-100">
-                          <FileText size={32} />
+                        <div className="w-full h-40 bg-indigo-50/50 text-indigo-400 rounded-xl flex flex-col gap-2 items-center justify-center shrink-0 border border-indigo-100/50">
+                          <FileText size={40} className="text-indigo-400" />
+                          <span className="text-[10px] font-bold text-indigo-600/50 uppercase tracking-widest">Document</span>
                         </div>
                       )}
-                      <div className="flex items-center justify-between w-full mt-1">
-                        <div className="flex-1 min-w-0 pr-2">
-                          <p className="text-[11px] font-bold text-slate-700 truncate group-hover:text-indigo-700 transition-colors">{att.name}</p>
-                          <p className="text-[9px] font-medium text-slate-400">{(att.size / 1024).toFixed(1)} KB</p>
+                      <div className="flex items-center justify-between w-full mt-2 px-1">
+                        <div className="flex-1 min-w-0 pr-3">
+                          <p className="text-xs font-bold text-slate-700 truncate group-hover:text-indigo-600 transition-colors">{att.name}</p>
+                          <p className="text-[10px] font-semibold text-slate-400 mt-0.5">{(att.size / 1024).toFixed(1)} KB</p>
                         </div>
-                        <Download size={14} className="text-slate-400 group-hover:text-indigo-600 shrink-0 opacity-0 group-hover:opacity-100 transition-all" />
+                        <div className="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 shrink-0 transition-all">
+                          <Download size={14} />
+                        </div>
                       </div>
-                    </a>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -847,6 +886,19 @@ export default function IssueDetailPage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Image Preview Modal */}
+      {previewImage && (
+        <div className="fixed inset-0 z-[500] flex items-center justify-center bg-slate-900/90 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setPreviewImage(null)}>
+          <div className="absolute top-6 right-6">
+            <button onClick={() => setPreviewImage(null)} className="h-12 w-12 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-all backdrop-blur-md">
+              <X size={24} />
+            </button>
+          </div>
+          <div className="w-full h-full p-12 flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+            <img src={previewImage} alt="Attachment Preview" className="max-w-full max-h-full object-contain drop-shadow-2xl rounded-lg animate-in zoom-in-95 duration-300" />
           </div>
         </div>
       )}

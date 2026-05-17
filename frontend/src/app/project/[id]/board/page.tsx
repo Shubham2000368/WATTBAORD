@@ -16,7 +16,8 @@ import {
   Filter,
   Plus,
   MoreVertical,
-  Trash2
+  Trash2,
+  Download
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -134,6 +135,46 @@ export default function BoardPage() {
         }))
     : tickets.filter(t => (typeof t.sprint === 'object' ? t.sprint?._id : t.sprint) === selectedSprint);
 
+  const handleExportBoardCSV = () => {
+    if (!filteredTickets || filteredTickets.length === 0) return;
+
+    const headers = ['Issue ID', 'Title', 'Status', 'Priority', 'Type', 'Reporter', 'Assignees'];
+    
+    const rows = filteredTickets.map(t => [
+      t.issueId,
+      `"${t.title.replace(/"/g, '""')}"`,
+      t.status,
+      t.priority,
+      t.type,
+      `"${t.reporter?.name || ''}"`,
+      `"${t.assignees?.map(a => a.name).join(', ') || ''}"`
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    
+    // Determine file name based on view
+    let filename = `board-${project?.key || 'export'}.csv`;
+    if (selectedSprint === 'backlog') filename = `backlog-${project?.key || 'export'}.csv`;
+    else if (selectedSprint !== 'all') {
+      const sprintName = sprints.find(s => s._id === selectedSprint)?.name || 'sprint';
+      filename = `${sprintName.replace(/\s+/g, '-')}-${project?.key || 'export'}.csv`;
+    }
+    
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const backlogColumns = [
     { status: 'TODO', title: 'To Do', color: 'bg-slate-500', icon: '📝' },
     { status: 'TO BE GROOMED', title: 'To Be Groomed', color: 'bg-slate-400', icon: '📋' },
@@ -188,6 +229,16 @@ export default function BoardPage() {
                 </select>
              </div>
              
+             {user?.role === 'admin' && filteredTickets.length > 0 && (
+               <button 
+                 onClick={handleExportBoardCSV}
+                 className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 rounded-lg text-[11px] font-bold transition-all uppercase tracking-widest whitespace-nowrap"
+               >
+                 <Download size={14} />
+                 <span>Export CSV</span>
+               </button>
+             )}
+
              <button className="hidden sm:flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-black text-white uppercase tracking-wider hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
                 <Plus className="h-4 w-4" />
                 <span>Add Issue</span>
