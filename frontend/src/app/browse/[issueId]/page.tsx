@@ -265,16 +265,23 @@ export default function IssueDetailPage() {
     const file = e.target.files?.[0];
     if (!file || !ticket) return;
     try {
-      const attachmentData = {
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        url: URL.createObjectURL(file)
+      // Convert file to base64 to store it in the database since there is no external file storage
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64String = reader.result as string;
+        
+        const attachmentData = {
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          url: base64String
+        };
+        const newAttachment = await ticketService.addAttachment(ticket._id, attachmentData);
+        if (newAttachment) {
+          setTicket(prev => prev ? { ...prev, attachments: [...prev.attachments, newAttachment] } : null);
+        }
       };
-      const newAttachment = await ticketService.addAttachment(ticket._id, attachmentData);
-      if (newAttachment) {
-        setTicket(prev => prev ? { ...prev, attachments: [...prev.attachments, newAttachment] } : null);
-      }
+      reader.readAsDataURL(file);
     } catch (err) {
       setError('Failed to upload attachment');
     }
@@ -306,6 +313,34 @@ export default function IssueDetailPage() {
     } finally {
       setIsSubmittingSubtask(false);
     }
+  };
+
+  const handleExportSubtasksCSV = () => {
+    if (!subtasks || subtasks.length === 0) return;
+
+    const headers = ['Issue ID', 'Title', 'Status', 'Priority', 'Type'];
+    const rows = subtasks.map(sub => [
+      sub.issueId,
+      `"${sub.title.replace(/"/g, '""')}"`,
+      sub.status,
+      sub.priority,
+      sub.type
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${ticket?.issueId}-subtasks.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const toggleAssignee = async (user: UserBasic) => {
@@ -482,6 +517,15 @@ export default function IssueDetailPage() {
                     <Sparkles size={16} className="text-purple-500" />
                     <span>Subtasks</span>
                   </h3>
+                  {user?.role === 'admin' && subtasks.length > 0 && (
+                    <button 
+                      onClick={handleExportSubtasksCSV}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[11px] font-bold transition-all uppercase tracking-widest"
+                    >
+                      <Download size={14} />
+                      <span>Export CSV</span>
+                    </button>
+                  )}
                </div>
                
                {isCreatingSubtask && (
@@ -529,11 +573,42 @@ export default function IssueDetailPage() {
                    </div>
                  </div>
                ) : (
-                 <div onClick={() => setIsEditingDesc(true)} className="text-slate-600 leading-relaxed text-lg min-h-[100px] hover:bg-slate-50 p-4 -ml-4 rounded-2xl transition-all cursor-pointer">
+                 <div onClick={() => setIsEditingDesc(true)} className="text-slate-600 leading-relaxed text-lg min-h-[100px] hover:bg-slate-50 p-4 -ml-4 rounded-2xl transition-all cursor-pointer whitespace-pre-wrap">
                     {ticket.description || <span className="text-slate-400 italic">No description provided...</span>}
                  </div>
                )}
             </div>
+
+            {ticket.attachments && ticket.attachments.length > 0 && (
+              <div className="mb-12">
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <Paperclip size={16} />
+                  <span>Attachments</span>
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {ticket.attachments.map(att => (
+                    <a key={att._id} href={att.url} target="_blank" rel="noopener noreferrer" className="flex flex-col gap-2 p-3 border border-slate-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50/30 transition-all group overflow-hidden">
+                      {att.type.startsWith('image/') ? (
+                        <div className="w-full h-24 bg-slate-100 rounded-lg overflow-hidden border border-slate-200 shrink-0">
+                          <img src={att.url} alt={att.name} className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className="w-full h-24 bg-indigo-50 text-indigo-400 rounded-lg flex items-center justify-center shrink-0 border border-indigo-100">
+                          <FileText size={32} />
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between w-full mt-1">
+                        <div className="flex-1 min-w-0 pr-2">
+                          <p className="text-[11px] font-bold text-slate-700 truncate group-hover:text-indigo-700 transition-colors">{att.name}</p>
+                          <p className="text-[9px] font-medium text-slate-400">{(att.size / 1024).toFixed(1)} KB</p>
+                        </div>
+                        <Download size={14} className="text-slate-400 group-hover:text-indigo-600 shrink-0 opacity-0 group-hover:opacity-100 transition-all" />
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="mb-12">
                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-8 flex items-center gap-2">
