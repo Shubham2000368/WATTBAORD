@@ -99,10 +99,13 @@ const getHeaders = () => {
 };
 
 export const ticketService = {
-  getTickets: async (projectId: string, sprintId?: string): Promise<Ticket[]> => {
+  getTickets: async (projectId: string, sprintId?: string, folderId?: string): Promise<Ticket[]> => {
     const url = new URL(`${API_PROJECTS_URL}/${projectId}/tickets`);
     if (sprintId) {
       url.searchParams.append('sprintId', sprintId);
+    }
+    if (folderId) {
+      url.searchParams.append('folderId', folderId);
     }
 
     const res = await fetch(url.toString(), {
