@@ -78,16 +78,15 @@ export default function BoardPage() {
     }
   }, [token, authLoading, router, loadData]);
 
-  const handleUpdateTicketStatus = async (ticketId: string, status: Ticket['status']) => {
+  const handleUpdateTicketStatus = useCallback(async (ticketId: string, status: Ticket['status']) => {
     try {
       await ticketService.updateTicket(ticketId, { status });
-      // In a real app, we might just trust the optimistic update in KanbanBoard
     } catch (err) {
       setError('Failed to update ticket status on server');
     }
-  };
+  }, []);
 
-  const handleMoveToActiveSprint = async (ticketId: string) => {
+  const handleMoveToActiveSprint = useCallback(async (ticketId: string) => {
     const active = sprints.find(s => s.status === 'active');
     if (!active) {
       setError('No active sprint found');
@@ -100,12 +99,27 @@ export default function BoardPage() {
         status: 'TODO'
       });
       if (updated) {
-        setTickets(tickets.map(t => t._id === ticketId ? updated : t));
+        setTickets(prev => prev.map(t => t._id === ticketId ? updated : t));
       }
     } catch (err) {
       setError('Failed to move ticket to active sprint');
     }
-  };
+  }, [sprints]);
+
+  const handleCreateTicket = useCallback(async (title: string, status: Ticket['status']) => {
+    try {
+      const created = await ticketService.createTicket(id as string, {
+        title,
+        status: selectedSprint === 'backlog' ? 'TO BE GROOMED' : status,
+        sprint: (selectedSprint !== 'backlog' && selectedSprint !== 'all') ? (selectedSprint as any) : undefined,
+      });
+      if (created) {
+        setTickets(prev => [...prev, created]);
+      }
+    } catch (err) {
+      setError('Failed to create ticket');
+    }
+  }, [id, selectedSprint]);
 
   const handleDeleteProject = async () => {
     if (!project) return;
@@ -282,18 +296,7 @@ export default function BoardPage() {
              <KanbanBoard 
                 initialTickets={filteredTickets as any} 
                 onTicketUpdate={handleUpdateTicketStatus}
-                onCreateTicket={async (title, status) => {
-                  try {
-                    await ticketService.createTicket(id as string, {
-                      title,
-                      status: selectedSprint === 'backlog' ? 'TO BE GROOMED' : status,
-                      sprint: (selectedSprint !== 'backlog' && selectedSprint !== 'all') ? (selectedSprint as any) : undefined,
-                    });
-                    await loadData();
-                  } catch (err) {
-                    setError('Failed to create ticket');
-                  }
-                }}
+                onCreateTicket={handleCreateTicket}
                 customColumns={selectedSprint === 'backlog' ? backlogColumns as any : undefined}
                 onMoveToActiveSprint={sprints.some(s => s.status === 'active') ? handleMoveToActiveSprint : undefined}
              />

@@ -69,6 +69,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     validateToken();
+
+    // Revalidate on window focus to ensure role updates are applied immediately
+    const onFocus = () => validateToken();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
   }, []);
 
   const login = (newToken: string, newUser: User) => {

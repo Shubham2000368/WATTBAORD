@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Ticket } from '@/services/ticketService';
 import { Draggable } from '@hello-pangea/dnd';
 import { AlertCircle, CheckCircle2, Bookmark, MoreHorizontal, MessageSquare, Paperclip, Sparkles } from 'lucide-react';
@@ -17,7 +17,7 @@ interface BoardTicketProps {
   cardSize?: 'compact' | 'expanded';
 }
 
-export function BoardTicket({ ticket, index, onMoveToActiveSprint, cardSize = 'compact' }: BoardTicketProps) {
+export const BoardTicket = memo(function BoardTicket({ ticket, index, onMoveToActiveSprint, cardSize = 'compact' }: BoardTicketProps) {
   const typeIcons = {
     Task: <CheckCircle2 className="h-3.5 w-3.5 text-indigo-500" />,
     Bug: <AlertCircle className="h-3.5 w-3.5 text-rose-500" />,
@@ -184,4 +184,16 @@ export function BoardTicket({ ticket, index, onMoveToActiveSprint, cardSize = 'c
       )}
     </Draggable>
   );
-}
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.index === nextProps.index &&
+    prevProps.cardSize === nextProps.cardSize &&
+    prevProps.ticket._id === nextProps.ticket._id &&
+    prevProps.ticket.status === nextProps.ticket.status &&
+    prevProps.ticket.title === nextProps.ticket.title &&
+    prevProps.ticket.priority === nextProps.ticket.priority &&
+    prevProps.ticket.type === nextProps.ticket.type &&
+    prevProps.ticket.assignees?.length === nextProps.ticket.assignees?.length &&
+    prevProps.onMoveToActiveSprint === nextProps.onMoveToActiveSprint
+  );
+});

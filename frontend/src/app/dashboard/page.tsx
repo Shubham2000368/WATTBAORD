@@ -34,6 +34,7 @@ import {
   Plus
 } from 'lucide-react';
 import Link from 'next/link';
+import { can } from '@/lib/permissions';
 
 const COLORS = ['#94a3b8', '#3b82f6', '#a855f7', '#f97316', '#e11d48', '#10b981', '#ec4899'];
 import { useRouter } from 'next/navigation';
@@ -142,7 +143,7 @@ export default function DashboardPage() {
     }
   }, [user, authLoading, router]);
 
-  const isAdmin = user?.role?.toLowerCase() === 'admin';
+  const isAdmin = user && can(user.role, 'manage:projects');
   const canCreateProject = isAdmin || team?.allowProjectCreation !== false;
 
   if (loading || authLoading) {
@@ -240,7 +241,7 @@ export default function DashboardPage() {
              Tickets by Status
            </h3>
             <div className="h-[300px] w-full min-h-[300px] relative">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+              <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                 <PieChart>
                   <Pie
                     data={statusData.filter(d => d.value > 0)}
@@ -271,7 +272,7 @@ export default function DashboardPage() {
              Progress Overview
            </h3>
             <div className="h-[300px] w-full min-h-[300px] relative">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+              <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                 <BarChart data={statusData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis 

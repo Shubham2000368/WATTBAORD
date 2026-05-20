@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { getPermissions, can } = require('../utils/permissions');
 
 exports.protect = async (req, res, next) => {
   let token;
@@ -24,6 +25,13 @@ exports.protect = async (req, res, next) => {
 
     req.user = await User.findById(decoded.id);
 
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'User no longer exists' });
+    }
+
+    // Attach derived permissions so controllers never need to re-compute them
+    req.user.permissions = getPermissions(req.user.role);
+
     next();
   } catch (err) {
     require('fs').appendFileSync('error.log', new Date().toISOString() + ' Auth Middleware Error: ' + err.message + '\n');
@@ -32,13 +40,26 @@ exports.protect = async (req, res, next) => {
   }
 };
 
-// Grant access to specific roles
+// Grant access to specific roles (e.g. authorize('admin'))
 exports.authorize = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
-        message: `User role ${req.user.role} is not authorized to access this route`,
+        message: `User role '${req.user.role}' is not authorized to access this route`,
+      });
+    }
+    next();
+  };
+};
+
+// Fine-grained permission check (e.g. hasPermission('manage:teams'))
+exports.hasPermission = (permission) => {
+  return (req, res, next) => {
+    if (!can(req.user.role, permission)) {
+      return res.status(403).json({
+        success: false,
+        message: `Permission denied: '${permission}' is required for this action`,
       });
     }
     next();

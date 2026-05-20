@@ -29,6 +29,7 @@ import { projectService, Project } from '@/services/projectService';
 import { sprintService, Sprint } from '@/services/sprintService';
 import { useSidebar } from '@/context/SidebarContext';
 import { useAuth } from '@/context/AuthContext';
+import { can } from '@/lib/permissions';
 import { useRouter } from 'next/navigation';
 
 function cn(...inputs: ClassValue[]) {
@@ -88,7 +89,7 @@ export function Sidebar() {
     },
     { name: 'Sprints', href: '/sprints', icon: Target },
     { name: 'My Tasks', href: '/tasks', icon: ClipboardList },
-    ...(user?.role === 'admin' ? [{ name: 'Teams', href: '/teams', icon: Users }] : []),
+    ...(user && can(user.role, 'manage:teams') ? [{ name: 'Teams', href: '/teams', icon: Users }] : []),
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
 

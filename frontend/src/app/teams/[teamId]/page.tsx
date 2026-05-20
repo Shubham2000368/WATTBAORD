@@ -27,6 +27,7 @@ import { useAuth } from '@/context/AuthContext';
 import { AddMembersModal } from '@/components/teams/AddMembersModal';
 import { EditMemberModal } from '@/components/teams/EditMemberModal';
 import Link from 'next/link';
+import { can } from '@/lib/permissions';
 
 export default function TeamDetailsPage() {
   const { teamId } = useParams();
@@ -47,7 +48,7 @@ export default function TeamDetailsPage() {
   const triggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const currentUserMember = team?.members.find(m => m && m.user && m.user._id === user?.id);
-  const isAdmin = user?.role?.toLowerCase() === 'admin' || currentUserMember?.role?.toLowerCase() === 'admin' || team?.lead?._id === user?.id;
+  const isAdmin = user && (can(user.role, 'manage:teams') || currentUserMember?.role?.toLowerCase() === 'admin' || team?.lead?._id === user?.id);
 
   useEffect(() => {
     if (teamId) {

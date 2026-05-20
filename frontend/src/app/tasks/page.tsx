@@ -20,6 +20,7 @@ import {
   Users
 } from 'lucide-react';
 import Link from 'next/link';
+import { can } from '@/lib/permissions';
 
 interface UserFromAPI {
   _id: string;
@@ -55,7 +56,7 @@ const PRIORITY_CONFIG: Record<string, { color: string; dot: string; emoji: strin
 
 export default function MyTasksPage() {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user && can(user.role, 'view:all_tasks');
 
   const [allTasks, setAllTasks] = useState<Ticket[]>([]);
   const [loading, setLoading]   = useState(true);

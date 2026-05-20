@@ -14,13 +14,14 @@ import {
 import { teamService, Team } from '@/services/teamService';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
+import { can } from '@/lib/permissions';
 
 export default function TeamsPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user && can(user.role, 'manage:teams');
 
   useEffect(() => {
     fetchTeams();

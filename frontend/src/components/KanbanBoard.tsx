@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { DragDropContext, DropResult } from '@hello-pangea/dnd';
 import { Ticket, TicketStatus } from '@/services/ticketService';
 import { BoardColumn } from './BoardColumn';
@@ -118,21 +118,25 @@ export function KanbanBoard({ initialTickets, onTicketUpdate, onCreateTicket, cu
     }
   };
 
-  const getTicketsByStatus = (status: TicketStatus) => {
-    return tickets.filter(t => {
-      if (t.status !== status) return false;
-
-      const isSubtask = t.type === 'Subtask' || !!t.parent;
-
-      if (onlyParents && isSubtask) return false;
-      if (!showSubtasks && isSubtask) return false;
-
-      // Type filter
-      if (typeFilter !== 'All' && t.type !== typeFilter) return false;
-
-      return true;
+  const ticketsByStatus = useMemo(() => {
+    const map = {} as Record<TicketStatus, Ticket[]>;
+    columns.forEach(col => {
+      map[col.status] = [];
     });
-  };
+
+    tickets.forEach(t => {
+      const isSubtask = t.type === 'Subtask' || !!t.parent;
+      if (onlyParents && isSubtask) return;
+      if (!showSubtasks && isSubtask) return;
+      if (typeFilter !== 'All' && t.type !== typeFilter) return;
+
+      if (map[t.status]) {
+        map[t.status].push(t);
+      }
+    });
+
+    return map;
+  }, [tickets, onlyParents, showSubtasks, typeFilter, columns]);
 
   return (
     <div className="h-full flex flex-col font-sans select-none">
@@ -278,7 +282,7 @@ export function KanbanBoard({ initialTickets, onTicketUpdate, onCreateTicket, cu
                 key={col.status}
                 title={col.title} 
                 status={col.status} 
-                tickets={getTicketsByStatus(col.status)}
+                tickets={ticketsByStatus[col.status] || []}
                 indicatorColor={col.color}
                 icon={col.icon}
                 onCreateTicket={onCreateTicket}

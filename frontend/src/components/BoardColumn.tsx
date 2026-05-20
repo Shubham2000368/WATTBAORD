@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, memo } from 'react';
 import { Droppable } from '@hello-pangea/dnd';
 import { Ticket, TicketStatus } from '@/services/ticketService';
 import { BoardTicket } from './BoardTicket';
@@ -21,7 +21,7 @@ interface BoardColumnProps {
   cardSize?: 'compact' | 'expanded';
 }
 
-export function BoardColumn({ title, status, tickets, indicatorColor, icon, onCreateTicket, onMoveToActiveSprint, cardSize = 'compact' }: BoardColumnProps) {
+export const BoardColumn = memo(function BoardColumn({ title, status, tickets, indicatorColor, icon, onCreateTicket, onMoveToActiveSprint, cardSize = 'compact' }: BoardColumnProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [loading, setLoading] = useState(false);
@@ -175,4 +175,16 @@ export function BoardColumn({ title, status, tickets, indicatorColor, icon, onCr
       </Droppable>
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.title === nextProps.title &&
+    prevProps.status === nextProps.status &&
+    prevProps.indicatorColor === nextProps.indicatorColor &&
+    prevProps.icon === nextProps.icon &&
+    prevProps.cardSize === nextProps.cardSize &&
+    prevProps.tickets.length === nextProps.tickets.length &&
+    prevProps.tickets.every((t, i) => t._id === nextProps.tickets[i]?._id && t.status === nextProps.tickets[i]?.status && t.updatedAt === nextProps.tickets[i]?.updatedAt) &&
+    prevProps.onCreateTicket === nextProps.onCreateTicket &&
+    prevProps.onMoveToActiveSprint === nextProps.onMoveToActiveSprint
+  );
+});

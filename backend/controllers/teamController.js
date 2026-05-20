@@ -201,8 +201,26 @@ exports.updateMemberRole = async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'Member not found in team' });
     }
 
+    // Update the team-level role
     team.members[memberIndex].role = role;
     await team.save();
+
+    // ── CRITICAL FIX ──────────────────────────────────────────────────────────
+    // Sync the system-level User.role so authorize('admin') middleware correctly
+    // grants or revokes admin capabilities on ALL protected routes.
+    //
+    // Mapping:  team role 'admin'  → User.role 'admin'
+    //           any other team role → User.role 'user'
+    //
+    // This is an atomic findByIdAndUpdate so it doesn't fire the password-hash
+    // pre-save hook (no password field is touched).
+    const systemRole = role === 'admin' ? 'admin' : 'user';
+    await User.findByIdAndUpdate(
+      req.params.userId,
+      { $set: { role: systemRole } },
+      { runValidators: true }
+    );
+    // ──────────────────────────────────────────────────────────────────────────
 
     const updatedTeam = await Team.findById(req.params.id)
       .populate('lead', 'name email avatar')
@@ -211,6 +229,9 @@ exports.updateMemberRole = async (req, res, next) => {
     res.status(200).json({
       success: true,
       data: updatedTeam,
+      // Return the new system role so the frontend can prompt the affected user to re-login
+      updatedUserId: req.params.userId,
+      newSystemRole: systemRole,
     });
   } catch (err) {
     console.error(`[TeamController] Error in PUT /api/teams/:id/members/:userId:`, err);
