@@ -6,7 +6,7 @@ const Project = require('../models/Project');
 // @access  Private
 exports.getSprints = async (req, res, next) => {
   try {
-    const sprints = await Sprint.find({ project: req.params.projectId });
+    const sprints = await Sprint.find({ project: req.params.projectId }).lean();
 
     res.status(200).json({
       success: true,
@@ -24,7 +24,7 @@ exports.getSprints = async (req, res, next) => {
 // @access  Private
 exports.getSprint = async (req, res, next) => {
   try {
-    const sprint = await Sprint.findById(req.params.id);
+    const sprint = await Sprint.findById(req.params.id).lean();
 
     if (!sprint) {
       return res.status(404).json({ success: false, error: 'Sprint not found' });

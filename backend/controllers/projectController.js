@@ -70,6 +70,40 @@ exports.getProject = async (req, res, next) => {
   }
 };
 
+// @desc    Get complete board data (Project, Sprints, Tickets)
+// @route   GET /api/projects/:id/board
+// @access  Private
+exports.getBoardData = async (req, res, next) => {
+  try {
+    const Ticket = require('../models/Ticket');
+    const Sprint = require('../models/Sprint');
+
+    const [project, sprints, tickets] = await Promise.all([
+      Project.findById(req.params.id).populate('owner', 'name email').populate('members.user', 'name email').lean(),
+      Sprint.find({ project: req.params.id }).lean(),
+      Ticket.find({ project: req.params.id })
+        .select('-attachments -comments -activityLogs')
+        .populate('assignees', 'name email')
+        .populate('reporter', 'name email')
+        .populate('sprint', 'name')
+        .populate('parent', 'issueId title')
+        .lean()
+    ]);
+
+    if (!project) {
+      return res.status(404).json({ success: false, error: 'Project not found' });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: { project, sprints, tickets },
+    });
+  } catch (err) {
+    console.error(`[ProjectController] Error in getBoardData:`, err);
+    res.status(400).json({ success: false, error: err.message });
+  }
+};
+
 // @desc    Create new project
 // @route   POST /api/projects
 // @access  Private

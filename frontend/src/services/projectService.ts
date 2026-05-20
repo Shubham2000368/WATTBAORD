@@ -116,6 +116,17 @@ export const projectService = {
     } catch (e) {}
   },
 
+  getBoardData: async (id: string): Promise<any> => {
+    const res = await fetch(`${API_URL}/${id}/board`, {
+      headers: getHeaders(),
+    });
+    const data = await res.json();
+    if (!data.success && data.error) {
+      throw new Error(data.error);
+    }
+    return data.data;
+  },
+
   createProject: async (projectData: { name: string; description?: string }): Promise<Project | null> => {
     const res = await fetch(API_URL, {
       method: 'POST',
