@@ -172,6 +172,7 @@ ticketSchema.pre('save', async function () {
 ticketSchema.index({ project: 1 });
 ticketSchema.index({ sprint: 1 });
 ticketSchema.index({ assignee: 1 });
+ticketSchema.index({ assignees: 1 });
 ticketSchema.index({ status: 1 });
 
 // Composite indexes for common board queries

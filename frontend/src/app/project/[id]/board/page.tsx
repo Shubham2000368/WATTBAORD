@@ -38,19 +38,15 @@ export default function BoardPage() {
     if (!id) return;
     setLoading(true);
     try {
-      const [projData, ticketData, sprintData] = await Promise.all([
-        projectService.getProject(id as string),
-        ticketService.getTickets(id as string),
-        sprintService.getSprints(id as string)
-      ]);
-      setProject(projData);
-      setTickets(ticketData);
-      setSprints(sprintData);
+      const data = await projectService.getBoardData(id as string);
+      setProject(data.project);
+      setTickets(data.tickets);
+      setSprints(data.sprints);
 
       // Auto-select active sprint only if no sprint param in URL at load time
       const sprintParam = searchParams.get('sprint');
       if (!sprintParam) {
-        const active = sprintData.find(s => s.status === 'active');
+        const active = data.sprints.find((s: Sprint) => s.status === 'active');
         if (active) setSelectedSprint(active._id);
       }
       
@@ -107,19 +103,43 @@ export default function BoardPage() {
   }, [sprints]);
 
   const handleCreateTicket = useCallback(async (title: string, status: Ticket['status']) => {
+    const tempId = 'temp-' + Date.now();
+    const tempTicket: Ticket = {
+      _id: tempId,
+      issueId: '...',
+      title,
+      status: selectedSprint === 'backlog' ? 'TO BE GROOMED' : status,
+      sprint: (selectedSprint !== 'backlog' && selectedSprint !== 'all') ? (selectedSprint as any) : undefined,
+      project: id as string,
+      type: 'Task',
+      priority: 'Medium',
+      reporter: { _id: user?.id || '', name: user?.name || '', email: user?.email || '' },
+      labels: [],
+      assignees: [],
+      comments: [],
+      attachments: [],
+      activityLogs: [],
+      timeTracking: { totalDuration: 0, statusHistory: [] },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    setTickets(prev => [...prev, tempTicket]);
+
     try {
       const created = await ticketService.createTicket(id as string, {
         title,
-        status: selectedSprint === 'backlog' ? 'TO BE GROOMED' : status,
-        sprint: (selectedSprint !== 'backlog' && selectedSprint !== 'all') ? (selectedSprint as any) : undefined,
+        status: tempTicket.status,
+        sprint: tempTicket.sprint,
       });
       if (created) {
-        setTickets(prev => [...prev, created]);
+        setTickets(prev => prev.map(t => t._id === tempId ? created : t));
       }
     } catch (err) {
+      setTickets(prev => prev.filter(t => t._id !== tempId));
       setError('Failed to create ticket');
     }
-  }, [id, selectedSprint]);
+  }, [id, selectedSprint, user]);
 
   const handleDeleteProject = async () => {
     if (!project) return;

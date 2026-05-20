@@ -2,6 +2,7 @@ const express = require('express');
 const {
   getProjects,
   getProject,
+  getBoardData,
   createProject,
   updateProject,
   deleteProject,
@@ -34,6 +35,9 @@ router.route('/:id')
   .get(getProject)
   .put(updateProject)
   .delete(authorize('admin'), deleteProject);
+
+router.route('/:id/board')
+  .get(getBoardData);
 
 // Member management routes
 router.route('/:id/members')
