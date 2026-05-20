@@ -1,5 +1,6 @@
 export interface User {
   _id: string;
+  id?: string; // normalized alias for _id, present after getMe calls
   name: string;
   email: string;
   avatar?: string;
@@ -30,6 +31,7 @@ export const userService = {
     }
     return data.success ? data.data : [];
   },
+
   createUser: async (userData: any): Promise<User> => {
     const res = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',
@@ -42,7 +44,12 @@ export const userService = {
     }
     return data.user;
   },
-  adminUpdateUser: async (id: string, userData: { name?: string; email?: string; password?: string }): Promise<User> => {
+
+  // Admin: update name/email/password of any user
+  adminUpdateUser: async (
+    id: string,
+    userData: { name?: string; email?: string; password?: string }
+  ): Promise<User> => {
     const res = await fetch(`${API_URL}/${id}`, {
       method: 'PUT',
       headers: getHeaders(),
@@ -54,6 +61,25 @@ export const userService = {
     }
     return data.data;
   },
+
+  // ── CRITICAL FIX ──────────────────────────────────────────────────────────
+  // Previously there was no dedicated role-update method, so promoting a user
+  // to admin via the Teams UI changed the team member role only — User.role
+  // was never updated, and authorize('admin') always rejected the new admin.
+  updateUserRole: async (id: string, role: 'user' | 'admin'): Promise<User> => {
+    const res = await fetch(`${API_URL}/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ role }),
+    });
+    const data = await res.json();
+    if (!data.success && data.error) {
+      throw new Error(data.error);
+    }
+    return data.data;
+  },
+  // ──────────────────────────────────────────────────────────────────────────
+
   updateMe: async (userData: { name?: string; email?: string; bio?: string; avatar?: string }): Promise<User> => {
     const res = await fetch(`${API_BASE_URL}/auth/updatedetails`, {
       method: 'PUT',
@@ -66,6 +92,7 @@ export const userService = {
     }
     return data.data;
   },
+
   updatePassword: async (passwordData: { currentPassword: string; newPassword: string }): Promise<any> => {
     const res = await fetch(`${API_BASE_URL}/auth/updatepassword`, {
       method: 'PUT',
@@ -79,3 +106,4 @@ export const userService = {
     return data;
   },
 };
+

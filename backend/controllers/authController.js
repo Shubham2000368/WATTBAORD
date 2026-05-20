@@ -94,10 +94,15 @@ exports.getMe = async (req, res, next) => {
       await assignUserToTeam(user);
     }
 
+    // Normalize _id → id so the frontend AuthContext User type
+    // is consistent between login (sendTokenResponse) and revalidation
+    const userData = user.toObject();
+    userData.id = userData._id.toString();
+
     res.status(200).json({
       success: true,
-      version: '1.0.5-team-fix',
-      data: user,
+      version: '1.0.6-rbac-fix',
+      data: userData,
     });
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
@@ -125,7 +130,7 @@ exports.getAllUsers = async (req, res, next) => {
 // @access  Private/Admin
 exports.adminUpdateUser = async (req, res, next) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body;
     const user = await User.findById(req.params.id);
 
     if (!user) {
@@ -136,6 +141,14 @@ exports.adminUpdateUser = async (req, res, next) => {
     if (email) user.email = email;
     if (password) user.password = password;
 
+    // ── CRITICAL FIX ──────────────────────────────────────────────────────────
+    // Previously the role field was silently ignored, so promoted users never
+    // gained admin capabilities even though the team member role was updated.
+    if (role && ['user', 'admin'].includes(role)) {
+      user.role = role;
+    }
+    // ──────────────────────────────────────────────────────────────────────────
+
     await user.save();
 
     res.status(200).json({
@@ -144,7 +157,8 @@ exports.adminUpdateUser = async (req, res, next) => {
         _id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        team: user.team,
       }
     });
   } catch (err) {

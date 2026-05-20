@@ -38,6 +38,7 @@ import {
 import Link from 'next/link';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { can } from '@/lib/permissions';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -98,7 +99,7 @@ export default function ProjectPage() {
 
   // Manage Members
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user && can(user.role, 'manage:projects');
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [allUsers, setAllUsers] = useState<{_id: string; name: string; email: string; role: string}[]>([]);
   const [addMemberEmail, setAddMemberEmail] = useState('');
@@ -444,7 +445,7 @@ export default function ProjectPage() {
                   <span className="bg-violet-200 text-violet-800 text-[10px] font-black rounded-full px-1.5 py-0.5">{project?.members?.length || 0}</span>
                 </button>
               )}
-              {user?.role === 'admin' && (
+              {isAdmin && (
                 <div className="relative group">
                   <button className="p-3 shadow-sm text-slate-400 hover:text-rose-600 hover:bg-slate-100 rounded-xl transition-all border border-slate-200">
                     <MoreVertical className="h-5 w-5" />

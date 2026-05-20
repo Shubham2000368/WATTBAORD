@@ -174,4 +174,10 @@ ticketSchema.index({ sprint: 1 });
 ticketSchema.index({ assignee: 1 });
 ticketSchema.index({ status: 1 });
 
+// Composite indexes for common board queries
+ticketSchema.index({ project: 1, sprint: 1, status: 1 });
+ticketSchema.index({ project: 1, folder: 1, status: 1 });
+ticketSchema.index({ project: 1, createdAt: -1 });
+ticketSchema.index({ issueId: 1 }, { unique: true });
+
 module.exports = mongoose.model('Ticket', ticketSchema);

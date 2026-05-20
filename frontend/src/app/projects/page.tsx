@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { can } from '@/lib/permissions';
 
 export default function ProjectsListPage() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -30,7 +31,7 @@ export default function ProjectsListPage() {
   const [error, setError] = useState<string | null>(null);
   const [team, setTeam] = useState<any>(null);
   const { user } = useAuth();
-  const isAdmin = user?.role?.toLowerCase() === 'admin';
+  const isAdmin = user && can(user.role, 'manage:projects');
 
   const fetchProjects = async () => {
     try {

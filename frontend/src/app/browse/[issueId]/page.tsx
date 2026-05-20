@@ -34,6 +34,7 @@ import {
 import Link from 'next/link';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { can } from '@/lib/permissions';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -482,7 +483,7 @@ export default function IssueDetailPage() {
                <ExternalLink size={16} />
                <span>Share</span>
              </button>
-             {user?.role === 'admin' && (
+             {user && can(user.role, 'delete:tickets') && (
                 <div className="relative group">
                   <button className="p-2 hover:bg-slate-100 text-slate-400 rounded-lg transition-all">
                     <MoreVertical size={20} />
@@ -540,7 +541,7 @@ export default function IssueDetailPage() {
                     <Sparkles size={16} className="text-purple-500" />
                     <span>Subtasks</span>
                   </h3>
-                  {user?.role === 'admin' && subtasks.length > 0 && (
+                  {user && can(user.role, 'export:data') && subtasks.length > 0 && (
                     <button 
                       onClick={handleExportSubtasksCSV}
                       className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[11px] font-bold transition-all uppercase tracking-widest"
@@ -769,18 +770,18 @@ export default function IssueDetailPage() {
                               <div key={a._id} className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg pl-1 pr-2 py-1 shadow-sm">
                                 <div className="h-5 w-5 rounded bg-indigo-600 flex items-center justify-center text-white text-[10px] font-black">{a.name[0]}</div>
                                 <span className="text-[11px] font-bold text-slate-700">{a.name}</span>
-                                {user?.role === 'admin' && (
+                                {user && can(user.role, 'assign:tasks') && (
                                   <button onClick={() => toggleAssignee(a)} className="ml-1 text-slate-400 hover:text-rose-500 transition-colors"><X size={12} /></button>
                                 )}
                               </div>
                             ))}
-                            {user?.role === 'admin' && (
+                            {user && can(user.role, 'assign:tasks') && (
                               <button onClick={() => setShowAssigneeSearch(!showAssigneeSearch)} className="flex items-center justify-center h-7 w-7 rounded-lg border-2 border-dashed border-slate-300 text-slate-400 hover:border-indigo-400 hover:text-indigo-600 hover:bg-white transition-all">
                                 <Plus size={14} />
                               </button>
                             )}
                          </div>
-                         {showAssigneeSearch && user?.role === 'admin' && (
+                         {showAssigneeSearch && user && can(user.role, 'assign:tasks') && (
                            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-xl z-50 max-h-48 overflow-y-auto p-2 animate-in fade-in zoom-in-95 duration-200">
                               {projectMembers.length > 0 ? projectMembers.map((member: any) => {
                                 const u = member.user;

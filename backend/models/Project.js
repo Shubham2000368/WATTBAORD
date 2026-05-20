@@ -53,6 +53,9 @@ const projectSchema = new mongoose.Schema({
       createdAt: { type: Date, default: Date.now }
     }
   ],
+  ticketCounter: {
+    type: Number,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

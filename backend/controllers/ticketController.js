@@ -32,7 +32,8 @@ exports.getTickets = async (req, res, next) => {
       .populate('assignees', 'name email')
       .populate('reporter', 'name email')
       .populate('sprint', 'name')
-      .populate('parent', 'issueId title');
+      .populate('parent', 'issueId title')
+      .lean();
 
     res.status(200).json({
       success: true,
@@ -75,24 +76,38 @@ exports.createTicket = async (req, res, next) => {
       }
     }
 
-    // Improved issueId generation: Find the highest number for this project and increment it
+    // Highly optimized issueId generation with automatic self-healing fallback
     const projectKey = project.key || 'TICKET';
-    const tickets = await Ticket.find({ issueId: new RegExp(`^${projectKey}-`, 'i') })
-      .select('issueId')
-      .lean();
+    let updatedProject = await Project.findByIdAndUpdate(
+      req.params.projectId,
+      { $inc: { ticketCounter: 1 } },
+      { new: true, useFindAndModify: false }
+    );
     
-    let maxNumber = 100;
-    tickets.forEach(t => {
-      if (t.issueId) {
-        const parts = t.issueId.split('-');
-        const num = parseInt(parts[parts.length - 1]);
-        if (!isNaN(num) && num > maxNumber) {
-          maxNumber = num;
+    let ticketNum;
+    if (!updatedProject || updatedProject.ticketCounter === undefined || updatedProject.ticketCounter === null) {
+      // First-time fallback: scan existing tickets once to initialize the counter
+      const tickets = await Ticket.find({ issueId: new RegExp(`^${projectKey}-`, 'i') })
+        .select('issueId')
+        .lean();
+      
+      let maxNumber = 100;
+      tickets.forEach(t => {
+        if (t.issueId) {
+          const parts = t.issueId.split('-');
+          const num = parseInt(parts[parts.length - 1]);
+          if (!isNaN(num) && num > maxNumber) {
+            maxNumber = num;
+          }
         }
-      }
-    });
+      });
+      ticketNum = maxNumber + 1;
+      await Project.findByIdAndUpdate(req.params.projectId, { ticketCounter: ticketNum });
+    } else {
+      ticketNum = updatedProject.ticketCounter;
+    }
     
-    req.body.issueId = `${projectKey}-${maxNumber + 1}`;
+    req.body.issueId = `${projectKey}-${ticketNum}`;
     console.log(`[TicketController] Generated new issueId: ${req.body.issueId} for project: ${projectKey}`);
 
     // Handle subtask logic

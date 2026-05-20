@@ -4,6 +4,7 @@ import { Calendar, Play, CheckCircle2, MoreVertical, Clock, Trash2 } from 'lucid
 import { useAuth } from '@/context/AuthContext';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { can } from '@/lib/permissions';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -17,7 +18,7 @@ interface SprintItemProps {
 
 export function SprintItem({ sprint, onUpdateStatus, onDelete }: SprintItemProps) {
   const { user } = useAuth();
-  const isAdmin = user?.role?.toLowerCase() === 'admin';
+  const isAdmin = user && can(user.role, 'manage:projects');
   const isPlanned = sprint.status === 'planned';
   const isActive = sprint.status === 'active';
   const isCompleted = sprint.status === 'completed';
