@@ -125,6 +125,11 @@ exports.createTicket = async (req, res, next) => {
     await logActivity(ticket, userId, 'Created the issue');
     await ticket.save();
 
+    const redisClient = require('../config/redis');
+    if (redisClient.isReady) {
+      await redisClient.del(`board:${req.params.projectId}`);
+    }
+
     const populatedTicket = await Ticket.findById(ticket._id)
       .populate('assignees', 'name email')
       .populate('reporter', 'name email')
@@ -263,6 +268,11 @@ exports.updateTicket = async (req, res, next) => {
     });
 
     await ticket.save();
+
+    const redisClient = require('../config/redis');
+    if (redisClient.isReady) {
+      await redisClient.del(`board:${ticket.project}`);
+    }
 
     // Smart Status Logic: If all subtasks of a parent are COMPLETED or QA ACCEPTED, move parent to READY FOR QA
     const triggerStatuses = ['COMPLETED', 'QA ACCEPTED'];

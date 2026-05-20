@@ -1,6 +1,7 @@
 const Project = require('../models/Project');
 const Sprint = require('../models/Sprint');
 const User = require('../models/User');
+const redisClient = require('../config/redis');
 
 // @desc    Get all projects for current user
 // @route   GET /api/projects
@@ -78,6 +79,18 @@ exports.getBoardData = async (req, res, next) => {
     const Ticket = require('../models/Ticket');
     const Sprint = require('../models/Sprint');
 
+    const cacheKey = `board:${req.params.id}`;
+    if (redisClient.isReady) {
+      const cached = await redisClient.get(cacheKey);
+      if (cached) {
+        return res.status(200).json({
+          success: true,
+          data: JSON.parse(cached),
+          source: 'cache'
+        });
+      }
+    }
+
     const [project, sprints, tickets] = await Promise.all([
       Project.findById(req.params.id).populate('owner', 'name email').populate('members.user', 'name email').lean(),
       Sprint.find({ project: req.params.id }).lean(),
@@ -94,9 +107,16 @@ exports.getBoardData = async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
 
+    const boardData = { project, sprints, tickets };
+
+    if (redisClient.isReady) {
+      // Cache for 15 minutes (900 seconds)
+      await redisClient.setEx(cacheKey, 900, JSON.stringify(boardData));
+    }
+
     res.status(200).json({
       success: true,
-      data: { project, sprints, tickets },
+      data: boardData,
     });
   } catch (err) {
     console.error(`[ProjectController] Error in getBoardData:`, err);
