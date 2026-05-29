@@ -18,6 +18,18 @@ const ROLE_PERMISSIONS = {
     'view:reports',
     'export:data',
   ],
+  manager: [
+    'view:all_tasks',
+    'assign:tasks',
+    'create:tickets',
+    'update:tickets',
+    'view:reports',
+  ],
+  member: [
+    'view:own_tasks',
+    'create:tickets',
+    'update:tickets',
+  ],
   user: [
     'view:own_tasks',
     'create:tickets',
@@ -27,9 +39,9 @@ const ROLE_PERMISSIONS = {
 
 /**
  * Returns the permission array for a given role.
- * Falls back to 'user' permissions for unknown roles.
+ * Falls back to 'member' permissions for unknown roles.
  */
-const getPermissions = (role) => ROLE_PERMISSIONS[role] ?? ROLE_PERMISSIONS.user;
+const getPermissions = (role) => ROLE_PERMISSIONS[role] ?? ROLE_PERMISSIONS.member;
 
 /**
  * Returns true if the given role includes the requested permission.

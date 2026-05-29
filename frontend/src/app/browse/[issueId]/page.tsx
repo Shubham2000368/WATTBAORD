@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { ticketService, Ticket, TicketStatus, Comment, Attachment, ActivityLog, UserBasic } from '@/services/ticketService';
 import { sprintService } from '@/services/sprintService';
 import { useAuth } from '@/context/AuthContext';
+import RenderComment from '@/components/RenderComment';
 import { 
   ArrowLeft, 
   Loader2, 
@@ -35,6 +36,8 @@ import Link from 'next/link';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { can } from '@/lib/permissions';
+import { AttachmentPreviewModal } from '@/components/AttachmentPreview';
+import { MentionDropdown } from '@/components/MentionDropdown';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -71,8 +74,18 @@ export default function IssueDetailPage() {
   const [commentText, setCommentText] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const commentInputRef = useRef<HTMLTextAreaElement>(null);
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  
+  // Custom previews, Drag & Drop, and Mentions states
+  const [activePreview, setActivePreview] = useState<Attachment | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionTriggerIndex, setMentionTriggerIndex] = useState(-1);
+  const [filteredUsers, setFilteredUsers] = useState<UserBasic[]>([]);
+  const [activeMentionIndex, setActiveMentionIndex] = useState(0);
+  const [selectedMentions, setSelectedMentions] = useState<{name: string, id: string}[]>([]);
 
   const [subtasks, setSubtasks] = useState<Ticket[]>([]);
   const [isCreatingSubtask, setIsCreatingSubtask] = useState(false);
@@ -251,11 +264,24 @@ export default function IssueDetailPage() {
   const handleAddComment = async () => {
     if (!ticket || !commentText.trim()) return;
     setIsSubmittingComment(true);
+
+    let processedText = commentText;
+    selectedMentions.forEach(m => {
+      // Reconstruct backend syntax for mentions
+      processedText = processedText.split(`@${m.name}`).join(`@[${m.name}](${m.id})`);
+    });
+
     try {
-      const newComment = await ticketService.addComment(ticket._id, commentText);
+      const newComment = await ticketService.addComment(ticket._id, processedText);
       if (newComment) {
         setTicket(prev => prev ? { ...prev, comments: [...prev.comments, newComment] } : null);
         setCommentText('');
+        setSelectedMentions([]);
+        // Reset textarea height
+        setTimeout(() => {
+          const input = document.getElementById('comment-input') as HTMLTextAreaElement;
+          if (input) input.style.height = 'auto';
+        }, 10);
       }
     } catch (err) {
       setError('Failed to add comment');
@@ -264,43 +290,217 @@ export default function IssueDetailPage() {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !ticket) return;
+  const handleDeleteAttachment = async (attachmentId: string) => {
+    if (!ticket) return;
     
+    // Optimistic UI update
+    const prevAttachments = ticket.attachments;
+    setTicket({
+      ...ticket,
+      attachments: ticket.attachments.filter(a => a._id !== attachmentId)
+    });
+
+    try {
+      await ticketService.deleteAttachment(ticket._id, attachmentId);
+    } catch (err: any) {
+      // Revert on failure
+      setTicket({ ...ticket, attachments: prevAttachments });
+      setError(err.message || 'Failed to delete attachment');
+    }
+  };
+
+  // Client-Side Image Compression with Canvas to optimize repository storage sizes
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          // Restrict to maximum 1200px width/height while maintaining aspect ratio
+          const MAX_LIMIT = 1200;
+          if (width > height) {
+            if (width > MAX_LIMIT) {
+              height = Math.round((height * MAX_LIMIT) / width);
+              width = MAX_LIMIT;
+            }
+          } else {
+            if (height > MAX_LIMIT) {
+              width = Math.round((width * MAX_LIMIT) / height);
+              height = MAX_LIMIT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+
+          // Compress to JPEG format with 80% quality parameter
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          resolve(dataUrl);
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const uploadAndAttachFile = async (file: File) => {
+    if (!ticket) return;
     setIsUploadingAttachment(true);
     setError(null);
     try {
-      // Convert file to base64 to store it in the database since there is no external file storage
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        try {
-          const base64String = reader.result as string;
-          
-          const attachmentData = {
-            name: file.name,
-            size: file.size,
-            type: file.type,
-            url: base64String
-          };
-          const newAttachment = await ticketService.addAttachment(ticket._id, attachmentData);
-          if (newAttachment) {
-            setTicket(prev => prev ? { ...prev, attachments: [...prev.attachments, newAttachment] } : null);
-          }
-        } catch (uploadErr: any) {
-          setError(uploadErr.message || 'Failed to upload attachment to server');
-        } finally {
-          setIsUploadingAttachment(false);
-        }
+      let fileUrl = '';
+      if (file.type.startsWith('image/')) {
+        fileUrl = await compressImage(file);
+      } else {
+        fileUrl = await new Promise((resolve, reject) => {
+          const r = new FileReader();
+          r.onloadend = () => resolve(r.result as string);
+          r.onerror = () => reject(new Error('Failed to read file locally'));
+          r.readAsDataURL(file);
+        });
+      }
+
+      const attachmentData = {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        url: fileUrl,
       };
-      reader.onerror = () => {
-        setError('Failed to read file locally');
-        setIsUploadingAttachment(false);
-      };
-      reader.readAsDataURL(file);
-    } catch (err) {
-      setError('Failed to start file upload');
+
+      const newAttachment = await ticketService.addAttachment(ticket._id, attachmentData);
+      if (newAttachment) {
+        setTicket(prev => prev ? { ...prev, attachments: [...prev.attachments, newAttachment] } : null);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload attachment');
+    } finally {
       setIsUploadingAttachment(false);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      await uploadAndAttachFile(file);
+    }
+  };
+
+  // Capture pastes (Ctrl+V or Cmd+V) to attach clipboard images instantly
+  const handlePaste = async (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        e.preventDefault();
+        const blob = items[i].getAsFile();
+        if (blob) {
+          const file = new File([blob], `paste_${Date.now()}.png`, { type: 'image/png' });
+          await uploadAndAttachFile(file);
+        }
+      }
+    }
+  };
+
+  // Mentions type-ahead processing
+  const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value;
+    setCommentText(text);
+
+    // Auto-resize textarea
+    if (commentInputRef.current) {
+      commentInputRef.current.style.height = 'auto';
+      commentInputRef.current.style.height = `${commentInputRef.current.scrollHeight}px`;
+    }
+
+    // Process mentions
+    const inputEle = e.target;
+    // ensure we get the selection right after state update by using the event target directly
+    const selectionStart = inputEle.selectionStart || 0;
+    const textBeforeCursor = text.substring(0, selectionStart);
+    const lastChar = textBeforeCursor.slice(-1);
+    
+    if (lastChar === '@') {
+      setMentionTriggerIndex(selectionStart - 1);
+      setMentionQuery('');
+      const membersList = (ticket?.project as any)?.members || [];
+      console.log('[DEBUG Mention] ticket.project:', ticket?.project);
+      console.log('[DEBUG Mention] membersList:', membersList);
+      console.log('[DEBUG Mention] mapped users:', membersList.map((m: any) => m.user).filter(Boolean));
+      setFilteredUsers(membersList.map((m: any) => m.user).filter(Boolean));
+      setActiveMentionIndex(0);
+    } else if (mentionTriggerIndex !== -1) {
+      const currentQuery = text.substring(mentionTriggerIndex + 1, selectionStart);
+      if (currentQuery.includes(' ') || selectionStart <= mentionTriggerIndex) {
+        // Break trigger context on whitespaces or if backspaced before trigger
+        setMentionTriggerIndex(-1);
+        setMentionQuery(null);
+      } else {
+        setMentionQuery(currentQuery);
+        const membersList = (ticket?.project as any)?.members || [];
+        const filtered = membersList
+          .map((m: any) => m.user)
+          .filter((u: any) => u && u.name && u.name.toLowerCase().includes(currentQuery.toLowerCase()));
+        setFilteredUsers(filtered);
+        setActiveMentionIndex(0);
+      }
+    }
+  };
+
+  const selectMention = (selectedUser: UserBasic) => {
+    if (mentionTriggerIndex === -1) return;
+    const beforeMention = commentText.substring(0, mentionTriggerIndex);
+    const afterMention = commentText.substring(mentionTriggerIndex + (mentionQuery || '').length + 1);
+    
+    // Instead of raw format, just display @Name
+    const newText = `${beforeMention}@${selectedUser.name}${afterMention}`;
+    
+    // Track selected mention
+    setSelectedMentions(prev => {
+      if (!prev.find(m => m.id === selectedUser._id)) {
+        return [...prev, { name: selectedUser.name, id: selectedUser._id }];
+      }
+      return prev;
+    });
+
+    setCommentText(newText);
+    setMentionTriggerIndex(-1);
+    setMentionQuery(null);
+    
+    // Focus back on the comment input
+    setTimeout(() => {
+      const input = document.getElementById('comment-input') as HTMLTextAreaElement;
+      if (input) {
+        input.focus();
+        const cursorPosition = beforeMention.length + selectedUser.name.length + 1; // Just @Name length
+        input.setSelectionRange(cursorPosition, cursorPosition);
+      }
+    }, 10);
+  };
+
+  // Keyboard navigation inside mentions selection popovers
+  const handleCommentKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (mentionTriggerIndex !== -1 && filteredUsers.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setActiveMentionIndex(prev => (prev + 1) % filteredUsers.length);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setActiveMentionIndex(prev => (prev - 1 + filteredUsers.length) % filteredUsers.length);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        selectMention(filteredUsers[activeMentionIndex]);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        setMentionTriggerIndex(-1);
+        setMentionQuery(null);
+      }
     }
   };
 
@@ -452,7 +652,20 @@ export default function IssueDetailPage() {
 
   return (
     <>
-      <div className="min-h-full bg-white flex flex-col">
+      <div 
+        className={cn("min-h-full bg-white flex flex-col relative transition-all duration-300", isDragging && "after:absolute after:inset-0 after:bg-indigo-500/10 after:z-[100] after:border-4 after:border-dashed after:border-indigo-500")}
+        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+        onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
+        onDrop={async (e) => {
+          e.preventDefault();
+          setIsDragging(false);
+          const files = e.dataTransfer.files;
+          if (files && files.length > 0) {
+            await uploadAndAttachFile(files[0]);
+          }
+        }}
+        onPaste={handlePaste}
+      >
         <header className="border-b border-slate-100 px-8 py-4 flex items-center justify-between sticky top-0 bg-white z-20">
           <div className="flex items-center gap-4">
             <Link href="/dashboard" className="p-2 hover:bg-slate-50 rounded-lg text-slate-400">
@@ -613,21 +826,21 @@ export default function IssueDetailPage() {
                   {ticket.attachments.map(att => (
                     <div 
                       key={att._id} 
-                      onClick={() => {
-                        if (att.type.startsWith('image/')) {
-                          setPreviewImage(att.url);
-                        } else {
-                          const a = document.createElement('a');
-                          a.href = att.url;
-                          a.download = att.name;
-                          a.click();
-                        }
-                      }}
-                      className="flex flex-col gap-2 p-3 border border-slate-200 rounded-2xl hover:border-indigo-300 hover:shadow-xl hover:shadow-indigo-500/10 hover:scale-[1.02] bg-white transition-all group overflow-hidden cursor-pointer w-64"
+                      className="relative flex flex-col gap-2 p-3 border border-slate-200 rounded-2xl bg-white transition-all group overflow-hidden w-64"
                     >
+                      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all z-10 flex items-center justify-center gap-3">
+                        <button onClick={() => setActivePreview(att)} className="h-10 w-10 bg-white/20 hover:bg-white text-white hover:text-indigo-600 rounded-full flex items-center justify-center transition-all shadow-xl backdrop-blur-md">
+                          <FileText size={18} />
+                        </button>
+                        {user && (can(user.role, 'delete:tickets') || ticket.reporter._id === ((user as any)._id || user.id) || att.user?._id === ((user as any)._id || user.id)) && (
+                          <button onClick={(e) => { e.stopPropagation(); handleDeleteAttachment(att._id); }} className="h-10 w-10 bg-rose-500/80 hover:bg-rose-500 text-white rounded-full flex items-center justify-center transition-all shadow-xl backdrop-blur-md">
+                            <Trash2 size={18} />
+                          </button>
+                        )}
+                      </div>
                       {att.type.startsWith('image/') ? (
-                        <div className="w-full h-40 bg-slate-900/5 rounded-xl overflow-hidden border border-slate-100 shrink-0 p-1">
-                          <img src={att.url} alt={att.name} className="w-full h-full object-contain rounded-lg" />
+                        <div className="w-full h-40 bg-slate-900/5 rounded-xl overflow-hidden border border-slate-100 shrink-0 p-1 relative">
+                          <img src={att.url} alt={att.name} className="w-full h-full object-cover rounded-lg" />
                         </div>
                       ) : (
                         <div className="w-full h-40 bg-indigo-50/50 text-indigo-400 rounded-xl flex flex-col gap-2 items-center justify-center shrink-0 border border-indigo-100/50">
@@ -635,14 +848,14 @@ export default function IssueDetailPage() {
                           <span className="text-[10px] font-bold text-indigo-600/50 uppercase tracking-widest">Document</span>
                         </div>
                       )}
-                      <div className="flex items-center justify-between w-full mt-2 px-1">
+                      <div className="flex items-center justify-between w-full mt-2 px-1 relative z-0">
                         <div className="flex-1 min-w-0 pr-3">
                           <p className="text-xs font-bold text-slate-700 truncate group-hover:text-indigo-600 transition-colors">{att.name}</p>
                           <p className="text-[10px] font-semibold text-slate-400 mt-0.5">{(att.size / 1024).toFixed(1)} KB</p>
                         </div>
-                        <div className="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 shrink-0 transition-all">
+                        <a href={att.url} download={att.name} className="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 shrink-0 transition-all relative z-20">
                           <Download size={14} />
-                        </div>
+                        </a>
                       </div>
                     </div>
                   ))}
@@ -664,16 +877,34 @@ export default function IssueDetailPage() {
                              <span className="text-sm font-black text-slate-900">{c.userName || 'Anonymous'}</span>
                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{new Date(c.createdAt).toLocaleString()}</span>
                           </div>
-                          <p className="text-slate-600 text-[15px] leading-relaxed">{c.text}</p>
+                          <RenderComment text={c.text} />
                        </div>
                     </div>
                   ))}
                </div>
-               <div className="flex gap-4 p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
+               <div className="flex gap-4 p-4 bg-slate-50/50 rounded-2xl border border-slate-100 relative items-start">
                   <div className="h-9 w-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-[11px] font-black shrink-0">{user?.name?.[0] || 'U'}</div>
-                  <div className="flex-1 flex gap-2">
-                     <input id="comment-input" value={commentText} onChange={(e) => setCommentText(e.target.value)} className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm font-medium" placeholder="Type a comment..." onKeyDown={(e) => e.key === 'Enter' && handleAddComment()} />
-                     <button onClick={handleAddComment} disabled={!commentText.trim() || isSubmittingComment} className="p-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-lg shadow-indigo-100">
+                  <div className="flex-1 flex gap-2 relative">
+                     {mentionTriggerIndex !== -1 && (
+                        <MentionDropdown users={filteredUsers} onSelect={selectMention} activeIndex={activeMentionIndex} />
+                     )}
+                     <textarea 
+                       id="comment-input" 
+                       ref={commentInputRef}
+                       value={commentText} 
+                       onChange={handleCommentChange} 
+                       onKeyDown={(e) => {
+                         handleCommentKeyDown(e);
+                         if (e.key === 'Enter' && !e.shiftKey && mentionTriggerIndex === -1) {
+                           e.preventDefault();
+                           handleAddComment();
+                         }
+                       }}
+                       className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-[15px] font-medium resize-none min-h-[48px] max-h-[200px]" 
+                       placeholder="Type a comment... (Type @ to mention, Shift+Enter for new line)" 
+                       rows={1}
+                     />
+                     <button onClick={handleAddComment} disabled={!commentText.trim() || isSubmittingComment} className="h-11 w-11 shrink-0 flex items-center justify-center bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-lg shadow-indigo-100">
                        {isSubmittingComment ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
                      </button>
                   </div>
@@ -890,18 +1121,9 @@ export default function IssueDetailPage() {
           </div>
         </div>
       )}
-      {/* Image Preview Modal */}
-      {previewImage && (
-        <div className="fixed inset-0 z-[500] flex items-center justify-center bg-slate-900/90 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setPreviewImage(null)}>
-          <div className="absolute top-6 right-6">
-            <button onClick={() => setPreviewImage(null)} className="h-12 w-12 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-all backdrop-blur-md">
-              <X size={24} />
-            </button>
-          </div>
-          <div className="w-full h-full p-12 flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-            <img src={previewImage} alt="Attachment Preview" className="max-w-full max-h-full object-contain drop-shadow-2xl rounded-lg animate-in zoom-in-95 duration-300" />
-          </div>
-        </div>
+      {/* Attachment Preview Modal */}
+      {activePreview && (
+        <AttachmentPreviewModal attachment={activePreview} onClose={() => setActivePreview(null)} />
       )}
     </>
   );

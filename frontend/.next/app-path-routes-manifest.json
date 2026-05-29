@@ -1,0 +1,22 @@
+{
+  "/(auth)/forgot-password/page": "/forgot-password",
+  "/(auth)/login/page": "/login",
+  "/(auth)/reset-password/[token]/page": "/reset-password/[token]",
+  "/(auth)/signup/page": "/signup",
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/auth/google-success/page": "/auth/google-success",
+  "/browse/[issueId]/page": "/browse/[issueId]",
+  "/dashboard/page": "/dashboard",
+  "/favicon.ico/route": "/favicon.ico",
+  "/page": "/",
+  "/project/[id]/board/page": "/project/[id]/board",
+  "/project/[id]/page": "/project/[id]",
+  "/projects/page": "/projects",
+  "/settings/page": "/settings",
+  "/sprints/[sprintId]/board/page": "/sprints/[sprintId]/board",
+  "/sprints/page": "/sprints",
+  "/tasks/page": "/tasks",
+  "/teams/[teamId]/page": "/teams/[teamId]",
+  "/teams/page": "/teams"
+}

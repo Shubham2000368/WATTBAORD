@@ -32,6 +32,18 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'view:reports',
     'export:data',
   ],
+  manager: [
+    'view:all_tasks',
+    'assign:tasks',
+    'create:tickets',
+    'update:tickets',
+    'view:reports',
+  ],
+  member: [
+    'view:own_tasks',
+    'create:tickets',
+    'update:tickets',
+  ],
   user: [
     'view:own_tasks',
     'create:tickets',
@@ -41,7 +53,7 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
 
 /** Returns the full permission list for a given role string. */
 export const getPermissions = (role: string): Permission[] =>
-  ROLE_PERMISSIONS[role] ?? ROLE_PERMISSIONS.user;
+  ROLE_PERMISSIONS[role] ?? ROLE_PERMISSIONS.member;
 
 /** Returns true if the given role grants the requested permission. */
 export const can = (role: string, permission: Permission): boolean =>

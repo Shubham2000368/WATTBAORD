@@ -332,16 +332,31 @@ exports.addComment = async (req, res, next) => {
     }
 
     const userId = req.user._id.toString();
+    
+    // Parse mentions and trigger email alerts asynchronously
+    const notificationService = require('../services/notificationService');
+    const commentText = req.body.text;
+    
+    // Process mentions extracts list of user ids to store in the DB
+    const mentionRegex = /@\[([^\]]+)\]\(([^\)]+)\)/g;
+    const matches = [...commentText.matchAll(mentionRegex)];
+    const mentions = matches.map(m => m[2]);
+
     const comment = {
       user: userId,
       userName: req.user.name,
-      text: req.body.text,
+      text: commentText,
+      mentions,
       createdAt: Date.now()
     };
 
     ticket.comments.push(comment);
     await logActivity(ticket, userId, 'Added a comment');
     await ticket.save();
+
+    // Trigger alerts asynchronously to keep response fast
+    notificationService.processMentions(ticket._id, commentText, req.user.name)
+      .catch(err => console.error('[TicketController] Async mentions alert failed:', err));
 
     res.status(200).json({
       success: true,
@@ -376,6 +391,45 @@ exports.addAttachment = async (req, res, next) => {
     res.status(200).json({
       success: true,
       data: ticket.attachments[ticket.attachments.length - 1]
+    });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+};
+
+// @desc    Delete attachment from ticket
+// @route   DELETE /api/tickets/:id/attachments/:attachmentId
+// @access  Private
+exports.deleteAttachment = async (req, res, next) => {
+  try {
+    const ticket = await Ticket.findById(req.params.id);
+    if (!ticket) {
+      return res.status(404).json({ success: false, error: 'Ticket not found' });
+    }
+
+    const attachment = ticket.attachments.id(req.params.attachmentId);
+    if (!attachment) {
+      return res.status(404).json({ success: false, error: 'Attachment not found' });
+    }
+
+    // Verify permissions: Only admin, manager, reporter, or the uploader can delete
+    const userId = req.user._id.toString();
+    const isUploader = attachment.user && attachment.user.toString() === userId;
+    const isReporter = ticket.reporter && ticket.reporter.toString() === userId;
+    const hasPrivilege = ['admin', 'manager'].includes(req.user.role);
+
+    if (!isUploader && !isReporter && !hasPrivilege) {
+      return res.status(403).json({ success: false, error: 'Not authorized to delete this attachment' });
+    }
+
+    const attachmentName = attachment.name;
+    attachment.deleteOne();
+    await logActivity(ticket, userId, 'Deleted an attachment', attachmentName);
+    await ticket.save();
+
+    res.status(200).json({
+      success: true,
+      data: {}
     });
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });

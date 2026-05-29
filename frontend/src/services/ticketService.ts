@@ -169,6 +169,18 @@ export const ticketService = {
     return data.success ? data.data : null;
   },
 
+  deleteAttachment: async (ticketId: string, attachmentId: string): Promise<boolean> => {
+    const res = await fetch(`${API_TICKETS_URL}/${ticketId}/attachments/${attachmentId}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to delete attachment');
+    }
+    return data.success;
+  },
+
   deleteTicket: async (id: string): Promise<boolean> => {
     const res = await fetch(`${API_TICKETS_URL}/${id}`, {
       method: 'DELETE',
