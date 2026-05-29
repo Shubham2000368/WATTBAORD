@@ -11,6 +11,10 @@ const commentSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  mentions: [{
+    type: mongoose.Schema.ObjectId,
+    ref: 'User'
+  }],
   createdAt: {
     type: Date,
     default: Date.now
