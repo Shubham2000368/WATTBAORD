@@ -1,0 +1,22 @@
+{
+  "/(auth)/forgot-password/page": "app/(auth)/forgot-password/page.js",
+  "/(auth)/login/page": "app/(auth)/login/page.js",
+  "/(auth)/reset-password/[token]/page": "app/(auth)/reset-password/[token]/page.js",
+  "/(auth)/signup/page": "app/(auth)/signup/page.js",
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/auth/google-success/page": "app/auth/google-success/page.js",
+  "/browse/[issueId]/page": "app/browse/[issueId]/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/page": "app/page.js",
+  "/project/[id]/board/page": "app/project/[id]/board/page.js",
+  "/project/[id]/page": "app/project/[id]/page.js",
+  "/projects/page": "app/projects/page.js",
+  "/settings/page": "app/settings/page.js",
+  "/sprints/[sprintId]/board/page": "app/sprints/[sprintId]/board/page.js",
+  "/sprints/page": "app/sprints/page.js",
+  "/tasks/page": "app/tasks/page.js",
+  "/teams/[teamId]/page": "app/teams/[teamId]/page.js",
+  "/teams/page": "app/teams/page.js"
+}
