@@ -15,7 +15,7 @@ require('./cron/sprintCron'); // Start Sprint Rollover Cron Job
 
 // Middleware
 app.use(cors({
-  origin: ["https://wattbaord-3.onrender.com", "http://localhost:3000"],
+  origin: ["http://localhost:3000", "https://wattboard.wattmonk.com"],
   credentials: true
 }));
 app.use(express.json({ limit: '50mb' }));
@@ -118,8 +118,8 @@ app.use('/api/teams', teams);
 app.use('/api/users', users);
 
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
+  res.json({
+    status: 'ok',
     service: 'WattBoard Backend',
     database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
     dbError: lastDbError,

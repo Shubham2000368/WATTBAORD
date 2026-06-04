@@ -13,7 +13,7 @@ export function GoogleAuthButton({ label = 'Continue with Google' }: GoogleAuthB
     setLoading(true);
     const backendUrl =
       process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ||
-      'https://wattbaord.onrender.com';
+      'https://wattboard.wattmonk.com';
     window.location.href = `${backendUrl}/api/auth/google`;
   };
 

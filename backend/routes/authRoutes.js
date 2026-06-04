@@ -38,7 +38,7 @@ router.get(
   '/google/callback',
   (req, res, next) => {
     const FRONTEND_BASE_URL = process.env.NODE_ENV === "production"
-      ? "https://wattbaord-3.onrender.com"
+      ? "https://wattboard.wattmonk.com"
       : (process.env.FRONTEND_URL || "http://localhost:3000");
     
     passport.authenticate('google', { 
@@ -57,14 +57,14 @@ router.get(
 
       // Environment-based config for Frontend Redirect
       const FRONTEND_BASE_URL = process.env.NODE_ENV === "production"
-        ? "https://wattbaord-3.onrender.com"
+        ? "https://wattboard.wattmonk.com"
         : (process.env.FRONTEND_URL || "http://localhost:3000");
 
       res.redirect(`${FRONTEND_BASE_URL}/auth/google-success?token=${token}`);
     } catch (err) {
       console.error('[Google OAuth Callback] Error:', err.message);
       const FRONTEND_BASE_URL = process.env.NODE_ENV === "production"
-        ? "https://wattbaord-3.onrender.com"
+        ? "https://wattboard.wattmonk.com"
         : (process.env.FRONTEND_URL || "http://localhost:3000");
       res.redirect(`${FRONTEND_BASE_URL}/login?error=token_failed`);
     }
