@@ -9,8 +9,8 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       {
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: process.env.NODE_ENV === 'production' 
-          ? 'https://wattbaord.onrender.com/api/auth/google/callback'
+        callbackURL: process.env.NODE_ENV === 'production'
+          ? 'https://wattboard.wattmonk.com/api/auth/google/callback'
           : '/api/auth/google/callback',
       },
       async (accessToken, refreshToken, profile, done) => {
