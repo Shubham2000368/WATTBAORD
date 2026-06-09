@@ -45,17 +45,65 @@ exports.getTickets = async (req, res, next) => {
       query.folder = folderId;
     }
 
-    const tickets = await Ticket.find(query)
-      .select('-attachments -comments -activityLogs')
-      .populate('assignees', 'name email avatar')
-      .populate('reporter', 'name email avatar')
-      .populate('sprint', 'name')
-      .populate('parent', 'issueId title')
-      .skip(skip)
-      .limit(limitNum)
-      .lean();
+    // Use a single aggregation with $facet to fetch paginated tickets and total count in one round‑trip
+  const ticketsAgg = await Ticket.aggregate([
+    { $match: query },
+    { $sort: { createdAt: -1 } }, // optional ordering, adjust as needed
+    { $facet: {
+      data: [
+        { $skip: skip },
+        { $limit: limitNum },
+        { $project: { attachments: 0, comments: 0, activityLogs: 0 } },
+        // Lookup assignees (multiple)
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'assignees',
+            foreignField: '_id',
+            as: 'assignees',
+            pipeline: [{ $project: { _id: 1, name: 1, email: 1, avatar: 1 } }]
+          }
+        },
+        // Lookup reporter (single)
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'reporter',
+            foreignField: '_id',
+            as: 'reporter',
+            pipeline: [{ $project: { _id: 1, name: 1, email: 1, avatar: 1 } }]
+          }
+        },
+        { $unwind: { path: '$reporter', preserveNullAndEmptyArrays: true } },
+        // Lookup sprint
+        {
+          $lookup: {
+            from: 'sprints',
+            localField: 'sprint',
+            foreignField: '_id',
+            as: 'sprint',
+            pipeline: [{ $project: { _id: 1, name: 1 } }]
+          }
+        },
+        { $unwind: { path: '$sprint', preserveNullAndEmptyArrays: true } },
+        // Lookup parent ticket (light)
+        {
+          $lookup: {
+            from: 'tickets',
+            localField: 'parent',
+            foreignField: '_id',
+            as: 'parent',
+            pipeline: [{ $project: { _id: 1, issueId: 1, title: 1 } }]
+          }
+        },
+        { $unwind: { path: '$parent', preserveNullAndEmptyArrays: true } }
+      ],
+      total: [{ $count: 'count' }]
+    } }
+  ]);
 
-    const total = await Ticket.countDocuments(query);
+  const tickets = ticketsAgg[0].data;
+  const total = ticketsAgg[0].total[0]?.count || 0;
     const responseData = {
       count: tickets.length,
       total,
