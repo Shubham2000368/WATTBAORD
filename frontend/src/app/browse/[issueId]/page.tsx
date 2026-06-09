@@ -5,6 +5,9 @@ import { useParams, useRouter } from 'next/navigation';
 import { ticketService, Ticket, TicketStatus, Comment, Attachment, ActivityLog, UserBasic } from '@/services/ticketService';
 import { sprintService } from '@/services/sprintService';
 import { useAuth } from '@/context/AuthContext';
+import { AttachmentDropzone } from '@/components/AttachmentDropzone';
+import { UploadQueueList } from '@/components/UploadQueueList';
+import { useAttachmentUpload } from '@/hooks/useAttachmentUpload';
 import RenderComment from '@/components/RenderComment';
 import { 
   ArrowLeft, 
@@ -30,7 +33,8 @@ import {
   Download,
   FileText,
   Sparkles,
-  Settings
+  Settings,
+  UploadCloud
 } from 'lucide-react';
 import Link from 'next/link';
 import { clsx, type ClassValue } from 'clsx';
@@ -59,7 +63,7 @@ const STATUS_CONFIG: Record<TicketStatus, { label: string, color: string, bg: st
 };
 
 export default function IssueDetailPage() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const { issueId } = useParams();
   const router = useRouter();
   const [ticket, setTicket] = useState<Ticket | null>(null);
@@ -86,6 +90,35 @@ export default function IssueDetailPage() {
   const [filteredUsers, setFilteredUsers] = useState<UserBasic[]>([]);
   const [activeMentionIndex, setActiveMentionIndex] = useState(0);
   const [selectedMentions, setSelectedMentions] = useState<{name: string, id: string}[]>([]);
+
+  const {
+    queue: uploadQueue,
+    addFiles,
+    removeFile,
+    retryUpload,
+    isUploading,
+    clearQueue,
+    uploadedAttachments
+  } = useAttachmentUpload(ticket?._id || '', token);
+
+  // Effect to sync uploaded attachments to ticket state
+  useEffect(() => {
+    if (uploadedAttachments.length > 0) {
+      setTicket(prev => {
+        if (!prev) return prev;
+        
+        // Find which attachments are new
+        const newAtts = uploadedAttachments.filter(
+          newAtt => !prev.attachments.some(existing => existing._id === newAtt._id || existing.name === newAtt.name)
+        );
+        
+        if (newAtts.length > 0) {
+          return { ...prev, attachments: [...prev.attachments, ...newAtts] };
+        }
+        return prev;
+      });
+    }
+  }, [uploadedAttachments]);
 
   const [subtasks, setSubtasks] = useState<Ticket[]>([]);
   const [isCreatingSubtask, setIsCreatingSubtask] = useState(false);
@@ -277,6 +310,7 @@ export default function IssueDetailPage() {
         setTicket(prev => prev ? { ...prev, comments: [...prev.comments, newComment] } : null);
         setCommentText('');
         setSelectedMentions([]);
+        clearQueue(); // Clear any completed uploads from the queue
         // Reset textarea height
         setTimeout(() => {
           const input = document.getElementById('comment-input') as HTMLTextAreaElement;
@@ -882,31 +916,50 @@ export default function IssueDetailPage() {
                     </div>
                   ))}
                </div>
-               <div className="flex gap-4 p-4 bg-slate-50/50 rounded-2xl border border-slate-100 relative items-start">
+               <div className="flex gap-4 p-4 bg-slate-50/50 rounded-2xl border border-slate-100 relative items-start mt-4">
                   <div className="h-9 w-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-[11px] font-black shrink-0">{user?.name?.[0] || 'U'}</div>
-                  <div className="flex-1 flex gap-2 relative">
+                  <div className="flex-1 flex flex-col gap-2 relative">
                      {mentionTriggerIndex !== -1 && (
                         <MentionDropdown users={filteredUsers} onSelect={selectMention} activeIndex={activeMentionIndex} />
                      )}
-                     <textarea 
-                       id="comment-input" 
-                       ref={commentInputRef}
-                       value={commentText} 
-                       onChange={handleCommentChange} 
-                       onKeyDown={(e) => {
-                         handleCommentKeyDown(e);
-                         if (e.key === 'Enter' && !e.shiftKey && mentionTriggerIndex === -1) {
-                           e.preventDefault();
-                           handleAddComment();
-                         }
-                       }}
-                       className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-[15px] font-medium resize-none min-h-[48px] max-h-[200px]" 
-                       placeholder="Type a comment... (Type @ to mention, Shift+Enter for new line)" 
-                       rows={1}
+                     
+                     <AttachmentDropzone onFilesSelected={addFiles}>
+                       <textarea 
+                         id="comment-input" 
+                         ref={commentInputRef}
+                         value={commentText} 
+                         onChange={handleCommentChange} 
+                         onKeyDown={(e) => {
+                           handleCommentKeyDown(e);
+                           if (e.key === 'Enter' && !e.shiftKey && mentionTriggerIndex === -1) {
+                             e.preventDefault();
+                             if (!isUploading) handleAddComment();
+                           }
+                         }}
+                         className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-[15px] font-medium resize-none min-h-[48px] max-h-[200px]" 
+                         placeholder="Type a comment... (Type @ to mention, Shift+Enter for new line) — Or drag & drop files here" 
+                         rows={1}
+                       />
+                     </AttachmentDropzone>
+
+                     <UploadQueueList 
+                       queue={uploadQueue} 
+                       onRemove={removeFile} 
+                       onRetry={retryUpload} 
                      />
-                     <button onClick={handleAddComment} disabled={!commentText.trim() || isSubmittingComment} className="h-11 w-11 shrink-0 flex items-center justify-center bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-lg shadow-indigo-100">
-                       {isSubmittingComment ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-                     </button>
+
+                     <div className="flex justify-between items-center mt-2">
+                       <p className="text-xs text-slate-400 font-medium flex items-center gap-1">
+                         <UploadCloud size={14} /> Paste (Ctrl+V) or drag & drop files
+                       </p>
+                       <button 
+                         onClick={handleAddComment} 
+                         disabled={(!commentText.trim() && uploadQueue.length === 0) || isSubmittingComment || isUploading} 
+                         className="h-10 px-4 shrink-0 flex items-center justify-center bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-lg shadow-indigo-100 font-bold text-sm"
+                       >
+                         {isSubmittingComment || isUploading ? <Loader2 size={18} className="animate-spin" /> : 'Send'}
+                       </button>
+                     </div>
                   </div>
                </div>
             </div>

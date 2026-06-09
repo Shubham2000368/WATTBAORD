@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const assignUserToTeam = require('../utils/teamAssignment');
+const redisClient = require('../config/redis');
 
 // Helper function to create token and send response
 const sendTokenResponse = (user, statusCode, res) => {
@@ -83,7 +84,20 @@ exports.login = async (req, res, next) => {
 // @access  Private
 exports.getMe = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id);
+    const cacheKey = `user:${req.user.id}`;
+    if (redisClient.isReady) {
+      const cached = await redisClient.get(cacheKey);
+      if (cached) {
+        return res.status(200).json({
+          success: true,
+          version: '1.0.6-rbac-fix',
+          data: JSON.parse(cached),
+          source: 'cache'
+        });
+      }
+    }
+
+    const user = await User.findById(req.user.id).lean();
 
     if (!user) {
       return res.status(404).json({ success: false, error: 'User not found' });
@@ -96,8 +110,12 @@ exports.getMe = async (req, res, next) => {
 
     // Normalize _id → id so the frontend AuthContext User type
     // is consistent between login (sendTokenResponse) and revalidation
-    const userData = user.toObject();
+    const userData = { ...user };
     userData.id = userData._id.toString();
+
+    if (redisClient.isReady) {
+      await redisClient.setEx(cacheKey, 3600, JSON.stringify(userData));
+    }
 
     res.status(200).json({
       success: true,
@@ -151,6 +169,10 @@ exports.adminUpdateUser = async (req, res, next) => {
 
     await user.save();
 
+    if (redisClient.isReady) {
+      await redisClient.del(`user:${user._id.toString()}`);
+    }
+
     res.status(200).json({
       success: true,
       data: {
@@ -186,6 +208,10 @@ exports.updateDetails = async (req, res, next) => {
       runValidators: true
     });
 
+    if (redisClient.isReady) {
+      await redisClient.del(`user:${req.user.id}`);
+    }
+
     res.status(200).json({
       success: true,
       data: user
@@ -209,6 +235,10 @@ exports.updatePassword = async (req, res, next) => {
 
     user.password = req.body.newPassword;
     await user.save();
+
+    if (redisClient.isReady) {
+      await redisClient.del(`user:${req.user.id}`);
+    }
 
     sendTokenResponse(user, 200, res);
   } catch (err) {

@@ -16,7 +16,25 @@ const logActivity = async (ticket, userId, action, details = '') => {
 // @access  Private
 exports.getTickets = async (req, res, next) => {
   try {
-    const { sprintId, folderId } = req.query;
+    const { sprintId, folderId, page = 1, limit = 50 } = req.query;
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    const skip = (pageNum - 1) * limitNum;
+
+    const cacheKey = `tickets:${req.params.projectId}:${sprintId || 'all'}:${folderId || 'all'}:${pageNum}:${limitNum}`;
+    const redisClient = require('../config/redis');
+    
+    if (redisClient.isReady) {
+      const cached = await redisClient.get(cacheKey);
+      if (cached) {
+        return res.status(200).json({
+          success: true,
+          ...JSON.parse(cached),
+          source: 'cache'
+        });
+      }
+    }
+
     const query = { project: req.params.projectId };
     
     if (sprintId) {
@@ -29,16 +47,30 @@ exports.getTickets = async (req, res, next) => {
 
     const tickets = await Ticket.find(query)
       .select('-attachments -comments -activityLogs')
-      .populate('assignees', 'name email')
-      .populate('reporter', 'name email')
+      .populate('assignees', 'name email avatar')
+      .populate('reporter', 'name email avatar')
       .populate('sprint', 'name')
       .populate('parent', 'issueId title')
+      .skip(skip)
+      .limit(limitNum)
       .lean();
+
+    const total = await Ticket.countDocuments(query);
+    const responseData = {
+      count: tickets.length,
+      total,
+      page: pageNum,
+      pages: Math.ceil(total / limitNum),
+      data: tickets
+    };
+
+    if (redisClient.isReady) {
+      await redisClient.setEx(cacheKey, 300, JSON.stringify(responseData));
+    }
 
     res.status(200).json({
       success: true,
-      count: tickets.length,
-      data: tickets,
+      ...responseData,
     });
   } catch (err) {
     console.error(`[TicketController] Error in ${req.method} ${req.originalUrl}:`, err);
@@ -128,6 +160,10 @@ exports.createTicket = async (req, res, next) => {
     const redisClient = require('../config/redis');
     if (redisClient.isReady) {
       await redisClient.del(`board:${req.params.projectId}`);
+      const keys = await redisClient.keys(`tickets:${req.params.projectId}:*`);
+      if (keys.length > 0) {
+        await redisClient.del(keys);
+      }
     }
 
     const populatedTicket = await Ticket.findById(ticket._id)
@@ -163,9 +199,10 @@ exports.getTicketByIssueId = async (req, res, next) => {
         }
       })
       .populate('sprint', 'name')
-      .populate('comments.user', 'name')
-      .populate('activityLogs.user', 'name')
-      .populate('parent', 'issueId title');
+      .populate('comments.user', 'name avatar')
+      .populate('activityLogs.user', 'name avatar')
+      .populate('parent', 'issueId title')
+      .lean();
 
     if (!ticket) {
       return res.status(404).json({ success: false, error: 'Ticket not found' });
@@ -272,6 +309,10 @@ exports.updateTicket = async (req, res, next) => {
     const redisClient = require('../config/redis');
     if (redisClient.isReady) {
       await redisClient.del(`board:${ticket.project}`);
+      const keys = await redisClient.keys(`tickets:${ticket.project}:*`);
+      if (keys.length > 0) {
+        await redisClient.del(keys);
+      }
     }
 
     // Smart Status Logic: If all subtasks of a parent are COMPLETED or QA ACCEPTED, move parent to READY FOR QA
@@ -307,9 +348,10 @@ exports.updateTicket = async (req, res, next) => {
         }
       })
       .populate('sprint', 'name')
-      .populate('comments.user', 'name')
-      .populate('activityLogs.user', 'name')
-      .populate('parent', 'issueId title');
+      .populate('comments.user', 'name avatar')
+      .populate('activityLogs.user', 'name avatar')
+      .populate('parent', 'issueId title')
+      .lean();
 
     res.status(200).json({
       success: true,
@@ -466,7 +508,17 @@ exports.deleteTicket = async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'Ticket not found' });
     }
 
+    const projectId = ticket.project;
     await ticket.deleteOne();
+
+    const redisClient = require('../config/redis');
+    if (redisClient.isReady) {
+      await redisClient.del(`board:${projectId}`);
+      const keys = await redisClient.keys(`tickets:${projectId}:*`);
+      if (keys.length > 0) {
+        await redisClient.del(keys);
+      }
+    }
 
     res.status(200).json({
       success: true,

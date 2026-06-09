@@ -184,5 +184,6 @@ ticketSchema.index({ project: 1, sprint: 1, status: 1 });
 ticketSchema.index({ project: 1, folder: 1, status: 1 });
 ticketSchema.index({ project: 1, createdAt: -1 });
 ticketSchema.index({ issueId: 1 }, { unique: true });
+ticketSchema.index({ parent: 1 });
 
 module.exports = mongoose.model('Ticket', ticketSchema);

@@ -33,6 +33,8 @@ export const AttachmentPreviewModal: React.FC<PreviewProps> = ({ attachment, onC
             <img src={attachment.url} alt={attachment.name} className="max-w-full max-h-full object-contain rounded-2xl drop-shadow-xl" />
           ) : isPDF ? (
             <iframe src={`${attachment.url}#toolbar=0`} className="w-full h-full rounded-2xl border border-slate-200" title={attachment.name} />
+          ) : attachment.type.startsWith('video/') ? (
+            <video src={attachment.url} controls className="w-full max-h-[75vh] rounded-2xl drop-shadow-xl" autoPlay />
           ) : (
             <div className="text-center p-12 bg-white rounded-3xl border border-slate-100 max-w-md shadow-lg shadow-slate-100">
               <FileText size={64} className="text-indigo-400 mx-auto mb-4" />
