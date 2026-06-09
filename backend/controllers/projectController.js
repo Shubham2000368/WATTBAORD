@@ -8,6 +8,20 @@ const redisClient = require('../config/redis');
 // @access  Private
 exports.getProjects = async (req, res, next) => {
   try {
+    const cacheKey = `projects:${req.user._id.toString()}`;
+    if (redisClient.isReady) {
+      const cached = await redisClient.get(cacheKey);
+      if (cached) {
+        const projects = JSON.parse(cached);
+        return res.status(200).json({
+          success: true,
+          count: projects.length,
+          data: projects,
+          source: 'cache'
+        });
+      }
+    }
+
     let query = {};
     
     // Admin sees ALL projects
@@ -27,6 +41,10 @@ exports.getProjects = async (req, res, next) => {
       .populate('team', 'name color')
       .lean();
 
+    if (redisClient.isReady) {
+      await redisClient.setEx(cacheKey, 300, JSON.stringify(projects));
+    }
+
     res.status(200).json({
       success: true,
       count: projects.length,
@@ -43,13 +61,29 @@ exports.getProjects = async (req, res, next) => {
 // @access  Private
 exports.getProject = async (req, res, next) => {
   try {
-    const project = await Project.findById(req.params.id)
-      .populate('owner', 'name email')
-      .populate('members.user', 'name email')
-      .lean();
+    const cacheKey = `project:${req.params.id}`;
+    let project = null;
+
+    if (redisClient.isReady) {
+      const cached = await redisClient.get(cacheKey);
+      if (cached) {
+        project = JSON.parse(cached);
+      }
+    }
 
     if (!project) {
-      return res.status(404).json({ success: false, error: 'Project not found' });
+      project = await Project.findById(req.params.id)
+        .populate('owner', 'name email')
+        .populate('members.user', 'name email')
+        .lean();
+
+      if (!project) {
+        return res.status(404).json({ success: false, error: 'Project not found' });
+      }
+
+      if (redisClient.isReady) {
+        await redisClient.setEx(cacheKey, 600, JSON.stringify(project));
+      }
     }
 
     // Checking if user is a member, owner, or part of the project's team
@@ -155,6 +189,10 @@ exports.createProject = async (req, res, next) => {
 
     // We no longer create 3 automatic sprints here to avoid confusion.
 
+    if (redisClient.isReady) {
+      await redisClient.del(`projects:${req.user._id.toString()}`);
+    }
+
     res.status(201).json({
       success: true,
       data: project,
@@ -185,6 +223,12 @@ exports.updateProject = async (req, res, next) => {
       new: true,
       runValidators: true,
     });
+
+    if (redisClient.isReady) {
+      await redisClient.del(`project:${req.params.id}`);
+      await redisClient.del(`board:${req.params.id}`);
+      await redisClient.del(`projects:${project.owner.toString()}`);
+    }
 
     res.status(200).json({
       success: true,
@@ -219,6 +263,12 @@ exports.deleteProject = async (req, res, next) => {
     await Sprint.deleteMany({ project: req.params.id });
 
     await project.deleteOne();
+
+    if (redisClient.isReady) {
+      await redisClient.del(`project:${req.params.id}`);
+      await redisClient.del(`board:${req.params.id}`);
+      await redisClient.del(`projects:${project.owner.toString()}`);
+    }
 
     res.status(200).json({
       success: true,

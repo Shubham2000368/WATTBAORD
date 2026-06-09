@@ -14,18 +14,24 @@ require('./config/passport'); // Load Google Strategy
 require('./cron/sprintCron'); // Start Sprint Rollover Cron Job
 
 // Middleware
+const performanceLogger = require('./middleware/performanceLogger');
+app.use(performanceLogger);
 app.use(cors({
   origin: ["http://localhost:3000", "https://wattboard.wattmonk.com"],
   credentials: true
 }));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ limit: '5mb', extended: true }));
 app.use(passport.initialize());
 
 let lastDbError = null;
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/wattflow')
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/wattflow', {
+  maxPoolSize: 50,
+  minPoolSize: 10,
+  serverSelectionTimeoutMS: 5000
+})
   .then(() => {
     console.log('✅ Connected to MongoDB');
     lastDbError = null;
@@ -109,6 +115,7 @@ const sprints = require('./routes/sprintRoutes');
 const tickets = require('./routes/ticketRoutes');
 const teams = require('./routes/teamRoutes');
 const users = require('./routes/userRoutes');
+const upload = require('./routes/uploadRoutes');
 
 app.use('/api/auth', auth);
 app.use('/api/projects', projects);
@@ -116,6 +123,7 @@ app.use('/api/sprints', sprints);
 app.use('/api/tickets', tickets);
 app.use('/api/teams', teams);
 app.use('/api/users', users);
+app.use('/api/upload', upload);
 
 app.get('/api/health', (req, res) => {
   res.json({
